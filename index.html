@@ -185,7 +185,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .quicks button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;font-size:12.5px;
   color:var(--text2);cursor:pointer;font-family:inherit}
 .quicks button.on{background:#EDF3F7;border-color:var(--primary);color:var(--primary)}
-.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0 4px}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:9px;margin:12px 0 4px}
 .sum{background:#F8FAFB;border-radius:11px;padding:10px 12px}
 .sum .t{font-size:11.5px;color:var(--text2)}
 .sum .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:1px}
@@ -194,6 +194,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 2px;font-size:11.5px;color:var(--text2)}
 .legend span{display:flex;align-items:center;gap:4px}
 .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.legend i.lg-dash{background:transparent;border:1.3px dashed #A8C6DA;box-sizing:border-box}
 table.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
 table.tbl th,table.tbl td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 table.tbl th:first-child,table.tbl td:first-child{text-align:left}
@@ -749,7 +750,7 @@ function statsView(){
 
   return ''
     + '<section class="sec" style="margin-top:12px">'
-    +   '<div class="sec-head"><h3>统计区间</h3><span class="hint">三个图共用</span></div>'
+    +   '<div class="sec-head"><h3>统计区间</h3><span class="hint">四个图共用</span></div>'
     +   '<div class="sec-body">'
     +     '<div class="range">'
     +       '<input type="date" value="' + state.from + '" onchange="setRangeFrom(this.value)">'
@@ -761,7 +762,8 @@ function statsView(){
     + '</section>'
     + nutritionBlock(days)
     + workoutBlock(days)
-    + sleepBlock(days);
+    + sleepBlock(days)
+    + weightBlock(days);
 }
 function quickRange(n){ state.to = todayStr(); state.from = addDays(state.to, -(n-1)); render(); }
 function quickMonth(){ const t = todayStr(); state.to = t; state.from = t.slice(0,8) + '01'; render(); }
@@ -796,11 +798,11 @@ function nutritionBlock(days){
     +       '<div class="sum"><div class="t">区间碳水</div><div class="v">' + fmt(sum.ac, 0) + ' <span style="font-size:12px;color:var(--text2)">/ ' + fmt(sum.tc, 0) + ' g</span></div><div class="s">达成 ' + rate(sum.ac, sum.tc) + '%（有记录日均 ' + recRate('tc','ac') + '%）</div></div>'
     +     '</div>'
     +     '<div class="legend">'
-    +       '<span><i style="background:#A8C6DA"></i>蛋白目标</span><span><i style="background:#3F6E8C"></i>蛋白实际</span>'
-    +       '<span><i style="background:#E8CBAE"></i>碳水目标</span><span><i style="background:#B5764A"></i>碳水实际</span>'
+    +       '<span><i class="lg-dash" style="border-color:#8FB6CE"></i>蛋白目标</span><span><i style="background:#3F6E8C"></i>蛋白实际</span>'
+    +       '<span><i class="lg-dash" style="border-color:#DCB68F"></i>碳水目标</span><span><i style="background:#B5764A"></i>碳水实际</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartNutrition(data) + '</div>'
-    +     '<div class="card-sub" style="margin-top:4px">未记录饮食的日期实际值按 0 计；「有记录日均」只统计至少录入过一条的 ' + sum.hasDays + ' 天。</div>'
+    +     '<div class="card-sub" style="margin-top:4px">柱顶数字为当日缺口＝目标−实际，负数表示还差，+ 表示已超出（0 显示 ✓）。未记录饮食的日期实际值按 0 计；「有记录日均」只统计至少录入过一条的 ' + sum.hasDays + ' 天。</div>'
     +   '</div>'
     + '</section>';
 }
@@ -811,12 +813,15 @@ function chartNutrition(data){
   let maxV = Math.max(20, ...values);
   maxV = Math.ceil(maxV / 20) * 20;
 
-  const W = Math.max(640, data.length * 50 + 80), H = 300;
-  const P = { l: 46, r: 14, t: 14, b: 54 };
+  const W = Math.max(680, data.length * 70 + 84), H = 322;
+  const P = { l: 46, r: 14, t: 34, b: 56 };
   const pw = W - P.l - P.r, ph = H - P.t - P.b;
   const gw = pw / data.length;
-  const bw = Math.max(5, Math.min(18, gw * 0.2));
+  const bw = Math.max(4, Math.min(15, gw * 0.19));
+  const stepX = bw + 2;            // 组内两柱紧挨
+  const gOff = bw + 7;             // 蛋白组 / 碳水组各自距离中心
   const y = v => P.t + ph - (v / maxV) * ph;
+  const base = P.t + ph;
   const step = Math.ceil(data.length / 10);
   const size = svgSize(W, H);
 
@@ -830,17 +835,31 @@ function chartNutrition(data){
 
   data.forEach((x, i) => {
     const cx = P.l + gw * i + gw / 2;
-    const bars = [
-      { v: x.tp, fill: '#A8C6DA', off: -1.55 },
-      { v: x.ap, fill: '#3F6E8C', off: -0.5 },
-      { v: x.tc, fill: '#E8CBAE', off: 0.5 },
-      { v: x.ac, fill: '#B5764A', off: 1.55 }
-    ];
-    bars.forEach(b => {
-      const bx = cx + b.off * bw * 1.12 - bw / 2;
-      const by = y(b.v), h = Math.max(0, P.t + ph - by);
-      s += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="' + b.fill + '"/>';
-    });
+    const solid = (bx, v, fill) => {
+      const by = y(v), h = Math.max(0, base - by);
+      return '<rect x="' + (bx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="' + fill + '"/>';
+    };
+    const dashed = (bx, v, stroke) => {
+      const by = y(v), h = Math.max(0, base - by);
+      return '<rect x="' + (bx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="#fff" stroke="' + stroke + '" stroke-width="1.4" stroke-dasharray="3 2"/>';
+    };
+    // 左侧：蛋白（目标虚线框 + 实际实心）；右侧：碳水
+    s += dashed(cx - gOff - stepX / 2, x.tp, '#8FB6CE');
+    s += solid (cx - gOff + stepX / 2, x.ap, '#3F6E8C');
+    s += dashed(cx + gOff - stepX / 2, x.tc, '#DCB68F');
+    s += solid (cx + gOff + stepX / 2, x.ac, '#B5764A');
+
+    // 柱顶缺口（目标 − 实际）
+    const gapLabel = (bx, tar, act, color) => {
+      if (tar <= 0 && act <= 0) return '';
+      const gap = r1(tar - act);
+      const txt = gap > 0 ? '-' + Math.round(gap) : gap < 0 ? '+' + Math.round(-gap) : '✓';
+      const ty = Math.min(y(tar), y(act)) - 5;
+      return '<text x="' + bx.toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="9" font-weight="700" fill="' + color + '" stroke="#fff" stroke-width="2.4" paint-order="stroke" text-anchor="middle">' + txt + '</text>';
+    };
+    s += gapLabel(cx - gOff, x.tp, x.ap, '#3F6E8C');
+    s += gapLabel(cx + gOff, x.tc, x.ac, '#B5764A');
+
     if (i % step === 0) {
       s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
     }
@@ -1073,6 +1092,110 @@ function chartSleep(days){
     s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
   });
   s += '<line x1="' + P.l + '" y1="' + (P.t + ph) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph) + '" stroke="#DCE2E9"/>';
+  s += '</svg>';
+  return s;
+}
+
+/* ---------- 图 4：体重变化 ---------- */
+function weightBlock(days){
+  const vals = days.map(d => {
+    const w = weightRec(d);
+    return { d, kg: w ? Number(w.kg) || 0 : null, rec: !!(w && w.date === d) };
+  });
+  const known = vals.filter(v => v.kg != null);
+  const recs = DB.weights.filter(w => w.date >= state.from && w.date <= state.to)
+                          .sort((a, b) => a.date < b.date ? -1 : 1);
+  const first = known.length ? known[0].kg : 0;
+  const last = known.length ? known[known.length - 1].kg : 0;
+  const delta = r1(last - first);
+
+  const stat = known.length
+    ? '<div class="sum-grid">'
+      + '<div class="sum"><div class="t">区间起始</div><div class="v">' + fmt(first, 1) + ' <span style="font-size:12px;color:var(--text2)">kg</span></div><div class="s">' + md(known[0].d) + '</div></div>'
+      + '<div class="sum"><div class="t">区间最新</div><div class="v">' + fmt(last, 1) + ' <span style="font-size:12px;color:var(--text2)">kg</span></div><div class="s">' + md(known[known.length - 1].d) + '</div></div>'
+      + '<div class="sum"><div class="t">区间变化</div><div class="v">' + (delta > 0 ? '+' : '') + fmt(delta, 1) + ' <span style="font-size:12px;color:var(--text2)">kg</span></div><div class="s">区间内称重 ' + recs.length + ' 次</div></div>'
+      + '</div>'
+    : '';
+
+  return ''
+    + '<section class="sec">'
+    +   '<div class="sec-head"><h3>④ 体重变化</h3><span class="hint">' + recs.length + ' 次称重</span></div>'
+    +   '<div class="sec-body">'
+    +     stat
+    +     '<div class="legend">'
+    +       '<span><i style="background:#6B8F9E"></i>体重（每日生效值）</span>'
+    +       '<span><i style="background:#B5764A;border-radius:50%"></i>称重日</span>'
+    +     '</div>'
+    +     '<div class="chart-box">' + chartWeight(vals) + '</div>'
+    +     '<div class="card-sub" style="margin-top:4px">数据来自「体重记录」：未称重的日期沿用上一条记录，折线保持水平；你录入新体重的当天才会跳变，且只影响当天及以后。</div>'
+    +   '</div>'
+    + '</section>';
+}
+
+function chartWeight(vals){
+  const pts = vals.filter(v => v.kg != null);
+  if (!pts.length) return emptyChart('区间内还没有体重记录');
+
+  const kgs = pts.map(p => p.kg);
+  let lo = Math.min(...kgs), hi = Math.max(...kgs);
+  if (hi - lo < 1) { const mid = (lo + hi) / 2; lo = mid - 0.5; hi = mid + 0.5; }
+  const pd = (hi - lo) * 0.28;
+  lo = Math.floor((lo - pd) * 10) / 10;
+  hi = Math.ceil((hi + pd) * 10) / 10;
+
+  const W = Math.max(640, vals.length * 46 + 80), H = 268;
+  const P = { l: 48, r: 18, t: 26, b: 50 };
+  const pw = W - P.l - P.r, ph = H - P.t - P.b;
+  const gw = pw / vals.length;
+  const x = i => P.l + gw * i + gw / 2;
+  const y = v => P.t + ph - (v - lo) / (hi - lo) * ph;
+  const base = P.t + ph;
+  const step = Math.ceil(vals.length / 12);
+  const size = svgSize(W, H);
+
+  let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg">';
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + (hi - lo) * i / 4, yy = y(v);
+    s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="#EDF0F4"/>';
+    s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + v.toFixed(1) + '</text>';
+  }
+
+  // 阶梯折线：沿用值保持水平，录入新体重的当天垂直跳变
+  const segs = [];
+  let cur = null;
+  vals.forEach((v, i) => {
+    if (v.kg == null) { cur = null; return; }
+    if (!cur) { cur = []; segs.push(cur); }
+    cur.push([i, v.kg]);
+  });
+  segs.forEach(seg => {
+    let d = '';
+    seg.forEach(([i, kg], k) => {
+      if (k === 0) { d += 'M' + x(i).toFixed(1) + ' ' + y(kg).toFixed(1); return; }
+      const pk = seg[k - 1][1];
+      d += ' L' + x(i).toFixed(1) + ' ' + y(pk).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(kg).toFixed(1);
+    });
+    s += '<path d="' + d + '" fill="none" stroke="#6B8F9E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  });
+
+  // 点：称重日实心并标数值
+  const recCount = vals.filter(v => v.rec).length;
+  vals.forEach((v, i) => {
+    if (v.kg == null) return;
+    const cx = x(i), cy = y(v.kg);
+    if (v.rec) {
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.6" fill="#B5764A" stroke="#fff" stroke-width="1.4"/>';
+      if (recCount <= 12 || i % step === 0) {
+        s += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" font-size="9" font-weight="600" fill="#B5764A" text-anchor="middle">' + fmt(v.kg, 1) + '</text>';
+      }
+    } else {
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2" fill="#fff" stroke="#6B8F9E" stroke-width="1.4"/>';
+    }
+    if (i % step === 0) {
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(v.d) + '</text>';
+    }
+  });
+  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="#DCE2E9"/>';
   s += '</svg>';
   return s;
 }
