@@ -74,6 +74,9 @@ b,strong{font-variant-numeric:tabular-nums}
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
 .sec-head h3{font-size:14px;font-weight:600}
 .sec-head .hint{font-size:11.5px;color:var(--text2)}
+.sec-head .hint .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#D5D0C8;margin-right:5px;vertical-align:1px}
+.sec-head .hint .sync-dot.ok{background:var(--ok)}
+.sec-head .hint .sync-dot.err{background:var(--warn)}
 .sec-head input.mini-date{border:none;background:transparent;color:var(--text2);font-size:11.5px;font-family:inherit;
   padding:0;width:104px;min-width:0;text-align:right;appearance:none;-webkit-appearance:none;border-radius:0}
 .sec-head input.mini-date:focus{outline:none;color:var(--primary)}
@@ -310,6 +313,8 @@ const DEF_DB = {
   logs: [],      // [{id, date, meal, foodId, unit, qty}]
   workouts: [],  // [{date, done, parts:[]}]
   sleeps: [],    // [{date, bedH, bedM, durH}]
+  dels: {},      // 删除墓碑 {key: ts}，多端合并时用于同步删除
+  meta: {},      // {updatedAt}
   settings: { gistId: '', gistToken: '', autoSync: true }
 };
 
@@ -320,6 +325,8 @@ function loadDB(){
     const d = JSON.parse(raw);
     const out = JSON.parse(JSON.stringify(DEF_DB));
     ['weights','coefs','foods','logs','workouts','sleeps'].forEach(k => { if (Array.isArray(d[k])) out[k] = d[k]; });
+    if (d.dels && typeof d.dels === 'object') out.dels = d.dels;
+    if (d.meta && typeof d.meta === 'object') out.meta = d.meta;
     out.settings = Object.assign({}, DEF_DB.settings, d.settings || {});
     return out;
   } catch(e){ return JSON.parse(JSON.stringify(DEF_DB)); }
@@ -328,13 +335,107 @@ function loadDB(){
 let DB = loadDB();
 let syncTimer = null;
 
+/* ---------- 多端合并（按记录 key 取时间戳较新者，删除用墓碑） ---------- */
+const SYNC_COLLS = {
+  weights:  r => 'w|' + r.date,
+  coefs:    r => 'c|' + r.date,
+  foods:    r => 'f|' + r.id,
+  logs:     r => 'l|' + r.id,
+  workouts: r => 'k|' + r.date,
+  sleeps:   r => 's|' + r.date
+};
+let snap = null;
+
+function stripU(r){ const c = Object.assign({}, r); delete c.u; return c; }
+
+function buildSnap(){
+  const out = {};
+  Object.keys(SYNC_COLLS).forEach(coll => {
+    const kf = SYNC_COLLS[coll], m = {};
+    (DB[coll] || []).forEach(r => { m[kf(r)] = JSON.stringify(stripU(r)); });
+    out[coll] = m;
+  });
+  return out;
+}
+
+/* 给新增/改动的记录打时间戳；消失的记录写删除墓碑 */
+function stampChanges(){
+  const now = Date.now();
+  if (!snap) snap = buildSnap();
+  const next = {};
+  DB.dels = DB.dels || {};
+  Object.keys(SYNC_COLLS).forEach(coll => {
+    const kf = SYNC_COLLS[coll], prev = snap[coll] || {}, m = {};
+    (DB[coll] || []).forEach(r => {
+      const k = kf(r), s = JSON.stringify(stripU(r));
+      if (prev[k] !== s) r.u = now;
+      m[k] = s;
+    });
+    Object.keys(prev).forEach(k => { if (!(k in m)) DB.dels[k] = now; });
+    next[coll] = m;
+  });
+  snap = next;
+  DB.meta = DB.meta || {};
+  DB.meta.updatedAt = now;
+  return now;
+}
+
+/* 把远端数据并进本地，返回本地是否被改动 */
+function mergeRemote(remote){
+  if (!remote || typeof remote !== 'object') return false;
+  const dels = Object.assign({}, DB.dels || {});
+  Object.keys(remote.dels || {}).forEach(k => {
+    dels[k] = Math.max(dels[k] || 0, Number(remote.dels[k]) || 0);
+  });
+
+  let changed = false;
+  Object.keys(SYNC_COLLS).forEach(coll => {
+    const kf = SYNC_COLLS[coll];
+    const lmap = {}, rmap = {};
+    (DB[coll] || []).forEach(r => { lmap[kf(r)] = r; });
+    (remote[coll] || []).forEach(r => { if (r && kf(r)) rmap[kf(r)] = r; });
+    const keys = Object.keys(Object.assign({}, lmap, rmap));
+    const out = [];
+    keys.forEach(k => {
+      const l = lmap[k], r = rmap[k];
+      let pick = (l && r) ? (((r.u || 0) > (l.u || 0)) ? r : l) : (l || r);
+      if (pick && (dels[k] || 0) > (pick.u || 0)) pick = null;
+      if (pick) out.push(pick);
+      const a = l ? JSON.stringify(stripU(l)) : '';
+      const b = pick ? JSON.stringify(stripU(pick)) : '';
+      if (a !== b) changed = true;
+    });
+    if (coll !== 'foods' && coll !== 'logs') out.sort((x, y) => String(x.date || '').localeCompare(String(y.date || '')));
+    DB[coll] = out;
+  });
+  DB.dels = dels;
+  DB.meta = DB.meta || {};
+  DB.meta.updatedAt = Math.max(DB.meta.updatedAt || 0, Number((remote.meta || {}).updatedAt) || 0);
+  if (changed) snap = buildSnap();
+  return changed;
+}
+
+/* 只比较业务数据，忽略同步元信息 */
+function normData(o){
+  if (!o) return '';
+  return JSON.stringify([
+    o.weights || [], o.coefs || [], o.foods || [],
+    o.logs || [], o.workouts || [], o.sleeps || [], o.dels || {}
+  ]);
+}
+
 function saveDB(silent){
+  stampChanges();
   try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
   catch(e){ toast('本地保存失败：' + e.message); }
-  if (!silent && DB.settings.autoSync && DB.settings.gistId && DB.settings.gistToken) {
+  if (!silent && DB.settings.autoSync && DB.settings.gistToken) {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => syncToGist(true), 1800);
+    syncTimer = setTimeout(() => syncNow(true), 1500);
   }
+}
+
+function saveLocal(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch(e){}
 }
 
 /* ---------- 目标计算 ---------- */
@@ -1256,16 +1357,13 @@ function settingsView(){
     + '</section>'
 
     + '<section class="sec">'
-    +   '<div class="sec-head"><h3>云同步（GitHub Gist）</h3><span class="hint">多设备共用</span></div>'
+    +   '<div class="sec-head"><h3>自动同步</h3><span class="hint"><i id="sync-dot" class="sync-dot"></i>' + (DB.settings.gistId ? '已连接' : '未连接') + '</span></div>'
     +   '<div class="sec-body">'
-    +     '<div class="field"><label>Gist ID</label><input id="set-gist-id" type="text" value="' + esc(DB.settings.gistId) + '" placeholder="留空则首次上传时自动创建"></div>'
-    +     '<div class="field"><label>GitHub Token（只需 gist 权限）</label><input id="set-gist-token" type="password" value="' + esc(DB.settings.gistToken) + '" placeholder="ghp_..."></div>'
-    +     '<div class="set-item" style="border-top:1px solid var(--line);margin-top:10px"><div><div class="l">自动同步</div><div class="d">每次修改后自动上传</div></div>'
-    +       '<label class="switch"><input type="checkbox" ' + (DB.settings.autoSync ? 'checked' : '') + ' onchange="DB.settings.autoSync=this.checked;saveSettings()"><i></i></label></div>'
-    +     '<div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="syncToGist()">上传到 Gist</button>'
-    +       '<button class="btn ghost" style="flex:1" onclick="syncFromGist()">从 Gist 下载</button></div>'
-    +     '<div id="gist-status" class="card-sub" style="margin-top:8px;text-align:center">' + (DB.settings.gistId ? '已配置：' + esc(DB.settings.gistId) : '未配置') + '</div>'
-    +     '<div class="notice">数据只存在你的浏览器和你的私有 Gist 里。手机端填同一个 Gist ID 和 Token，点「从 Gist 下载」即可拿到电脑上的数据。</div>'
+    +     '<div class="field"><label>GitHub Token（需 gist 权限）</label><input id="set-gist-token" type="password" value="' + esc(DB.settings.gistToken) + '" placeholder="ghp_..."></div>'
+    +     '<div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="connectSync()">连接并同步</button>'
+    +       '<button class="btn ghost" style="flex:1" onclick="syncNow(false)">立即同步</button></div>'
+    +     '<div id="gist-status" class="card-sub" style="margin-top:8px;text-align:center">' + (DB.settings.gistId ? '已连接 · ' + esc(DB.settings.gistId) : '未连接') + '</div>'
+    +     '<div class="notice">填一次 Token：之后每台设备打开都会自动拉取最新数据，改动后自动上传，不用再点任何按钮。手机端只填同一个 Token 即可，Gist 会自动找回。</div>'
     +   '</div>'
     + '</section>'
 
@@ -1283,16 +1381,24 @@ function settingsView(){
 }
 
 function saveSettings(){
-  const idEl = $('set-gist-id'), tkEl = $('set-gist-token');
-  if (idEl) DB.settings.gistId = idEl.value.trim();
+  const tkEl = $('set-gist-token');
   if (tkEl) DB.settings.gistToken = tkEl.value.trim();
-  saveDB(true);
+  saveLocal();
 }
 function syncCreds(){
-  const idEl = $('set-gist-id'), tkEl = $('set-gist-token');
-  if (idEl) DB.settings.gistId = idEl.value.trim();
+  const tkEl = $('set-gist-token');
   if (tkEl) DB.settings.gistToken = tkEl.value.trim();
-  saveDB(true);
+  saveLocal();
+}
+/* 填 Token 后一键连上：自动找回/创建 Gist 并完成首次合并 */
+function connectSync(){
+  syncCreds();
+  if (!DB.settings.gistToken) { toast('请先粘贴 GitHub Token'); return; }
+  DB.settings.autoSync = true;
+  saveLocal();
+  syncNow(false).then(ok => {
+    if (ok) render();
+  });
 }
 
 function delWeight(date){
@@ -1348,6 +1454,8 @@ function clearAll(){
    Gist 同步
    ============================================================ */
 const GIST_FILE = 'nutrition-data.json';
+const GIST_DESC = '增重营养记录数据同步';
+let syncBusy = false, syncAgain = false, lastSyncAt = null;
 
 function gistHeaders(){
   return {
@@ -1356,79 +1464,101 @@ function gistHeaders(){
     'Content-Type': 'application/json'
   };
 }
+function gistErr(code){
+  if (code === 401) return 'Token 无效或已过期（401）';
+  if (code === 403) return 'Token 缺少 gist 权限（403）';
+  if (code === 404) return '找不到 Gist（404）';
+  return 'HTTP ' + code;
+}
 function syncPayload(){
   const clean = JSON.parse(JSON.stringify(DB));
-  clean.settings = { autoSync: DB.settings.autoSync };
+  clean.settings = { autoSync: !!DB.settings.autoSync };
   clean.syncedAt = new Date().toISOString();
   return clean;
 }
 
-async function syncToGist(silent){
-  syncCreds();
+function setSyncMsg(msg, cls){
   const st = $('gist-status');
-  if (!DB.settings.gistToken) { if (!silent && st) st.textContent = '请先填写 GitHub Token'; if (!silent) toast('请先填写 GitHub Token'); return; }
-  if (!silent && st) st.textContent = '正在上传…';
+  if (st) { st.textContent = msg; st.style.color = cls === 'err' ? 'var(--warn)' : (cls === 'ok' ? 'var(--ok)' : ''); }
+  const dot = $('sync-dot');
+  if (dot) dot.className = 'sync-dot ' + (cls || '');
+}
 
-  const payload = {
-    description: '增重营养记录数据同步',
-    public: false,
-    files: {}
-  };
+/* 没记 Gist ID 时，按 description 在自己的 gist 里找回来（手机端只需填 Token） */
+async function findGistId(){
+  const res = await fetch('https://api.github.com/gists?per_page=100', { headers: gistHeaders(), cache: 'no-store' });
+  if (!res.ok) throw new Error(gistErr(res.status));
+  const list = await res.json();
+  const hit = (list || []).find(g => g.description === GIST_DESC && g.files && g.files[GIST_FILE]);
+  return hit ? hit.id : null;
+}
+
+async function pullRemote(){
+  if (!DB.settings.gistId) {
+    const id = await findGistId();
+    if (!id) return null;
+    DB.settings.gistId = id;
+    saveLocal();
+  }
+  const res = await fetch('https://api.github.com/gists/' + DB.settings.gistId, { headers: gistHeaders(), cache: 'no-store' });
+  if (res.status === 404) { DB.settings.gistId = ''; return null; }
+  if (!res.ok) throw new Error(gistErr(res.status));
+  const data = await res.json();
+  const f = data.files && data.files[GIST_FILE];
+  if (!f || !f.content) return null;
+  try { return JSON.parse(f.content); } catch(e){ return null; }
+}
+
+async function pushRemote(){
+  const payload = { description: GIST_DESC, public: false, files: {} };
   payload.files[GIST_FILE] = { content: JSON.stringify(syncPayload(), null, 2) };
+  let url = 'https://api.github.com/gists', method = 'POST';
+  if (DB.settings.gistId) { url += '/' + DB.settings.gistId; method = 'PATCH'; }
+  const res = await fetch(url, { method, headers: gistHeaders(), body: JSON.stringify(payload) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || gistErr(res.status));
+  if (!DB.settings.gistId && data.id) DB.settings.gistId = data.id;
+  saveLocal();
+}
 
+/* 一次同步 = 拉取 → 按记录合并 → 有差异就推送 */
+async function syncNow(silent){
+  if (!DB.settings.gistToken) {
+    setSyncMsg('未连接', '');
+    if (!silent) toast('请先填写 GitHub Token');
+    return false;
+  }
+  if (syncBusy) { syncAgain = true; return false; }
+  syncBusy = true;
+  setSyncMsg('同步中…');
   try {
-    let url = 'https://api.github.com/gists';
-    let method = 'POST';
-    if (DB.settings.gistId) { url += '/' + DB.settings.gistId; method = 'PATCH'; }
-    const res = await fetch(url, { method, headers: gistHeaders(), body: JSON.stringify(payload) });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
-    if (!DB.settings.gistId && data.id) {
-      DB.settings.gistId = data.id;
-      saveDB(true);
-      const el = $('set-gist-id'); if (el) el.value = data.id;
+    const remote = await pullRemote();
+    stampChanges();
+    const changed = mergeRemote(remote);
+    let stored = false;
+    if (changed) { saveLocal(); if (!document.querySelector('.mask')) { render(); } }
+    if (!remote || normData(syncPayload()) !== normData(remote)) {
+      await pushRemote();
+      stored = true;
+    } else {
+      saveLocal();
     }
-    if (st) st.textContent = '上传成功 · ' + new Date().toLocaleTimeString();
-    if (!silent) toast('已同步到 Gist');
+    lastSyncAt = Date.now();
+    setSyncMsg('已同步 · ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }), 'ok');
+    if (!silent) toast(changed ? (stored ? '已合并并同步' : '已拉取最新数据') : '已是最新');
+    return true;
   } catch(e) {
-    if (st) st.textContent = '上传失败：' + e.message;
-    if (!silent) toast('上传失败：' + e.message);
+    setSyncMsg('同步失败：' + e.message, 'err');
+    if (!silent) toast('同步失败：' + e.message);
+    return false;
+  } finally {
+    syncBusy = false;
+    if (syncAgain) { syncAgain = false; setTimeout(() => syncNow(true), 600); }
   }
 }
 
-async function syncFromGist(silent){
-  syncCreds();
-  const st = $('gist-status');
-  if (!DB.settings.gistId || !DB.settings.gistToken) {
-    if (!silent) { if (st) st.textContent = '请先填写 Gist ID 和 Token'; toast('请先填写 Gist ID 和 Token'); }
-    return;
-  }
-  if (!silent && st) st.textContent = '正在下载…';
-  try {
-    const res = await fetch('https://api.github.com/gists/' + DB.settings.gistId, { headers: gistHeaders() });
-    const data = await res.json();
-    if (!res.ok) {
-      let msg = data.message || ('HTTP ' + res.status);
-      if (res.status === 401) msg = 'Token 无效或已过期（401）';
-      if (res.status === 403) msg = 'Token 缺少 gist 权限（403）';
-      if (res.status === 404) msg = 'Gist ID 不存在（404）';
-      throw new Error(msg);
-    }
-    const file = data.files && data.files[GIST_FILE];
-    if (!file || !file.content) throw new Error('Gist 里还没有数据，请先在另一端点「上传到 Gist」');
-    const remote = JSON.parse(file.content);
-    ['weights','coefs','foods','logs','workouts','sleeps'].forEach(k => {
-      if (Array.isArray(remote[k])) DB[k] = remote[k];
-    });
-    saveDB(true);
-    render();
-    if (st) st.textContent = '下载成功 · ' + new Date().toLocaleTimeString();
-    if (!silent) toast('已从 Gist 同步');
-  } catch(e) {
-    if (st) st.textContent = '下载失败：' + e.message;
-    if (!silent) toast('下载失败：' + e.message);
-  }
-}
+function syncToGist(){ return syncNow(false); }
+function syncFromGist(){ return syncNow(false); }
 
 /* ============================================================
    弹窗 / toast
@@ -1450,14 +1580,23 @@ function toast(msg){
    启动
    ============================================================ */
 (function init(){
+  snap = buildSnap();
   // 支持通过 URL 参数快速带凭据（手机端加到桌面时更方便）
   const q = new URLSearchParams(location.search);
-  if (q.get('gist')) { DB.settings.gistId = q.get('gist'); }
-  if (q.get('token')) { DB.settings.gistToken = q.get('token'); }
+  if (q.get('gist')) DB.settings.gistId = q.get('gist');
+  if (q.get('token')) { DB.settings.gistToken = q.get('token'); DB.settings.autoSync = true; saveLocal(); }
   render();
-  if (DB.settings.gistId && DB.settings.gistToken) {
-    syncFromGist(true);
-  }
+  if (DB.settings.gistToken && DB.settings.autoSync) syncNow(true);
+
+  // 手机切回前台 / 重新联网时自动拉最新
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && DB.settings.gistToken && DB.settings.autoSync) {
+      if (!lastSyncAt || Date.now() - lastSyncAt > 20000) syncNow(true);
+    }
+  });
+  window.addEventListener('online', () => {
+    if (DB.settings.gistToken && DB.settings.autoSync) syncNow(true);
+  });
 })();
 </script>
 </body>
