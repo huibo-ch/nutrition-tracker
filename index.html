@@ -385,7 +385,8 @@ const state = {
   date: todayStr(),
   meal: '早餐',
   from: addDays(todayStr(), -6),
-  to: todayStr()
+  to: todayStr(),
+  nutriMode: 'p'
 };
 
 function go(tab){
@@ -772,56 +773,62 @@ function setRangeTo(v){ if (!v) return; if (v < state.from) state.from = v; stat
 
 /* ---------- 图 1：营养 ---------- */
 function nutritionBlock(days){
+  const mode = state.nutriMode || 'p';
+  const isP = mode === 'p';
+  const name = isP ? '蛋白质' : '碳水';
   const data = days.map(d => {
     const t = target(d), i = intake(d);
-    return { d, tp: t.tp, tc: t.tc, ap: i.p, ac: i.c, has: DB.logs.some(l => l.date === d) };
+    return { d, tar: isP ? t.tp : t.tc, act: isP ? i.p : i.c };
   });
-  const sum = data.reduce((a, x) => {
-    a.tp += x.tp; a.tc += x.tc; a.ap += x.ap; a.ac += x.ac; if (x.has) a.hasDays++;
-    return a;
-  }, { tp:0, tc:0, ap:0, ac:0, hasDays:0 });
-
-  const rate = (act, tar) => tar > 0 ? Math.round(act / tar * 100) : 0;
-  const recorded = data.filter(x => x.has);
-  const recRate = (k1, k2) => {
-    const tar = recorded.reduce((s,x) => s + x[k1], 0);
-    const act = recorded.reduce((s,x) => s + x[k2], 0);
-    return tar > 0 ? Math.round(act / tar * 100) : 0;
-  };
+  const n = days.length;
+  const sumAct = data.reduce((s, x) => s + x.act, 0);
+  const sumTar = data.reduce((s, x) => s + x.tar, 0);
+  const rate = sumTar > 0 ? Math.round(sumAct / sumTar * 100) : 0;
+  const dayAct = n ? r1(sumAct / n) : 0;
+  const dayTar = n ? r1(sumTar / n) : 0;
+  const dayGap = r1(dayTar - dayAct);
+  const dayGapRate = dayTar > 0 ? Math.round(dayGap / dayTar * 100) : 0;
 
   return ''
     + '<section class="sec">'
-    +   '<div class="sec-head"><h3>① 蛋白质 / 碳水</h3><span class="hint">' + days.length + ' 天</span></div>'
+    +   '<div class="sec-head"><h3>① ' + name + '</h3><span class="hint">' + n + ' 天</span></div>'
     +   '<div class="sec-body">'
+    +     '<div class="quicks" style="margin-top:0">'
+    +       '<button class="' + (isP ? 'on' : '') + '" onclick="setNutriMode(\'p\')">蛋白质</button>'
+    +       '<button class="' + (isP ? '' : 'on') + '" onclick="setNutriMode(\'c\')">碳水</button>'
+    +     '</div>'
     +     '<div class="sum-grid">'
-    +       '<div class="sum"><div class="t">区间蛋白质</div><div class="v">' + fmt(sum.ap, 0) + ' <span style="font-size:12px;color:var(--text2)">/ ' + fmt(sum.tp, 0) + ' g</span></div><div class="s">达成 ' + rate(sum.ap, sum.tp) + '%（有记录日均 ' + recRate('tp','ap') + '%）</div></div>'
-    +       '<div class="sum"><div class="t">区间碳水</div><div class="v">' + fmt(sum.ac, 0) + ' <span style="font-size:12px;color:var(--text2)">/ ' + fmt(sum.tc, 0) + ' g</span></div><div class="s">达成 ' + rate(sum.ac, sum.tc) + '%（有记录日均 ' + recRate('tc','ac') + '%）</div></div>'
+    +       '<div class="sum"><div class="t">总' + name + '</div><div class="v">' + fmt(sumAct, 0) + ' / ' + fmt(sumTar, 0) + ' <span style="font-size:12px;color:var(--text2)">g</span></div><div class="s">达成率 ' + rate + '%</div></div>'
+    +       '<div class="sum"><div class="t">日均' + name + '</div><div class="v">' + fmt(dayAct, 0) + ' / ' + fmt(dayTar, 0) + ' <span style="font-size:12px;color:var(--text2)">g</span></div><div class="s">日均缺口 ' + fmt(dayGap, 1) + ' g / 缺口率 ' + dayGapRate + '%</div></div>'
     +     '</div>'
     +     '<div class="legend">'
-    +       '<span><i class="lg-dash" style="border-color:#8FB6CE"></i>蛋白目标</span><span><i style="background:#3F6E8C"></i>蛋白实际</span>'
-    +       '<span><i class="lg-dash" style="border-color:#DCB68F"></i>碳水目标</span><span><i style="background:#B5764A"></i>碳水实际</span>'
+    +       '<span><i style="background:' + (isP ? '#8FB6CE' : '#DCB68F') + '"></i>' + name + '目标（折线）</span>'
+    +       '<span><i style="background:' + (isP ? '#3F6E8C' : '#B5764A') + '"></i>' + name + '实际（柱形）</span>'
     +     '</div>'
-    +     '<div class="chart-box">' + chartNutrition(data) + '</div>'
-    +     '<div class="card-sub" style="margin-top:4px">柱顶数字为当日缺口＝目标−实际，负数表示还差，+ 表示已超出（0 显示 ✓）。未记录饮食的日期实际值按 0 计；「有记录日均」只统计至少录入过一条的 ' + sum.hasDays + ' 天。</div>'
+    +     '<div class="chart-box">' + chartNutrition(data, mode) + '</div>'
+    +     '<div class="card-sub" style="margin-top:4px">柱顶与折线之间的数字为当日差值＝目标−实际，负数表示还差，正数表示已超出；未记录饮食的日期实际值按 0 计。</div>'
     +   '</div>'
     + '</section>';
 }
+function setNutriMode(m){ state.nutriMode = m; render(); }
 
-function chartNutrition(data){
+function chartNutrition(data, mode){
   if (!data.length) return emptyChart('区间内没有数据');
-  const values = data.flatMap(x => [x.tp, x.tc, x.ap, x.ac]);
-  let maxV = Math.max(20, ...values);
+  const isP = mode !== 'c';
+  const barColor = isP ? '#3F6E8C' : '#B5764A';
+  const lineColor = isP ? '#8FB6CE' : '#DCB68F';
+
+  let maxV = Math.max(20, ...data.flatMap(x => [x.tar, x.act]));
   maxV = Math.ceil(maxV / 20) * 20;
 
-  const W = Math.max(680, data.length * 70 + 84), H = 322;
-  const P = { l: 46, r: 14, t: 34, b: 56 };
+  const W = Math.max(660, data.length * 54 + 84), H = 320;
+  const P = { l: 46, r: 14, t: 30, b: 54 };
   const pw = W - P.l - P.r, ph = H - P.t - P.b;
   const gw = pw / data.length;
-  const bw = Math.max(4, Math.min(15, gw * 0.19));
-  const stepX = bw + 2;            // 组内两柱紧挨
-  const gOff = bw + 7;             // 蛋白组 / 碳水组各自距离中心
+  const bw = Math.max(6, Math.min(30, gw * 0.52));
   const y = v => P.t + ph - (v / maxV) * ph;
   const base = P.t + ph;
+  const cxOf = i => P.l + gw * i + gw / 2;
   const step = Math.ceil(data.length / 10);
   const size = svgSize(W, H);
 
@@ -833,39 +840,34 @@ function chartNutrition(data){
     s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + Math.round(v) + '</text>';
   }
 
+  // 柱形：实际值
   data.forEach((x, i) => {
-    const cx = P.l + gw * i + gw / 2;
-    const solid = (bx, v, fill) => {
-      const by = y(v), h = Math.max(0, base - by);
-      return '<rect x="' + (bx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="' + fill + '"/>';
-    };
-    const dashed = (bx, v, stroke) => {
-      const by = y(v), h = Math.max(0, base - by);
-      return '<rect x="' + (bx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5" fill="#fff" stroke="' + stroke + '" stroke-width="1.4" stroke-dasharray="3 2"/>';
-    };
-    // 左侧：蛋白（目标虚线框 + 实际实心）；右侧：碳水
-    s += dashed(cx - gOff - stepX / 2, x.tp, '#8FB6CE');
-    s += solid (cx - gOff + stepX / 2, x.ap, '#3F6E8C');
-    s += dashed(cx + gOff - stepX / 2, x.tc, '#DCB68F');
-    s += solid (cx + gOff + stepX / 2, x.ac, '#B5764A');
-
-    // 柱顶缺口（目标 − 实际）
-    const gapLabel = (bx, tar, act, color) => {
-      if (tar <= 0 && act <= 0) return '';
-      const gap = r1(tar - act);
-      const txt = gap > 0 ? '-' + Math.round(gap) : gap < 0 ? '+' + Math.round(-gap) : '✓';
-      const ty = Math.min(y(tar), y(act)) - 5;
-      return '<text x="' + bx.toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="9" font-weight="700" fill="' + color + '" stroke="#fff" stroke-width="2.4" paint-order="stroke" text-anchor="middle">' + txt + '</text>';
-    };
-    s += gapLabel(cx - gOff, x.tp, x.ap, '#3F6E8C');
-    s += gapLabel(cx + gOff, x.tc, x.ac, '#B5764A');
-
-    if (i % step === 0) {
-      s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
-    }
+    const cx = cxOf(i), by = y(x.act), h = Math.max(0, base - by);
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + barColor + '"/>';
   });
-  // 基线
-  s += '<line x1="' + P.l + '" y1="' + (P.t + ph) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph) + '" stroke="#DCE2E9" stroke-width="1"/>';
+
+  // 折线：目标值
+  let path = '';
+  data.forEach((x, i) => { path += (i ? 'L' : 'M') + cxOf(i).toFixed(1) + ' ' + y(x.tar).toFixed(1) + ' '; });
+  s += '<path d="' + path + '" fill="none" stroke="' + lineColor + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+  data.forEach((x, i) => {
+    s += '<circle cx="' + cxOf(i).toFixed(1) + '" cy="' + y(x.tar).toFixed(1) + '" r="3" fill="#fff" stroke="' + lineColor + '" stroke-width="2"/>';
+  });
+
+  // 折线与柱顶之间标注差值（目标 − 实际）
+  data.forEach((x, i) => {
+    const gap = r1(x.tar - x.act);
+    const txt = gap > 0 ? '-' + Math.round(gap) : gap < 0 ? '+' + Math.round(-gap) : '0';
+    const ty = (y(x.tar) + y(x.act)) / 2 + 3;
+    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="9.5" font-weight="700" fill="' + barColor + '" stroke="#fff" stroke-width="2.4" paint-order="stroke" text-anchor="middle">' + txt + '</text>';
+  });
+
+  // X 轴
+  data.forEach((x, i) => {
+    if (i % step !== 0) return;
+    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
+  });
+  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="#DCE2E9" stroke-width="1"/>';
   s += '</svg>';
   return s;
 }
@@ -881,6 +883,9 @@ function workoutBlock(days){
     return { d, parts, done: !!(w && w.done) };
   });
   const n = days.length;
+  // 周口径：周日为一周起点（周日至周六），统计周期跨越的总周数，不足一周按一周计
+  const sunOf = str => { const x = new Date(str + 'T00:00:00'); x.setDate(x.getDate() - x.getDay()); return x; };
+  const weeks = Math.max(1, Math.round((sunOf(state.to) - sunOf(state.from)) / 604800000) + 1);
   const total = PARTS.reduce((s,p) => s + counts[p], 0);
   const restDays = daily.filter(x => !x.done).length;
 
@@ -894,7 +899,7 @@ function workoutBlock(days){
 
   const rows = PARTS.map(p => {
     const c = counts[p];
-    const freq = c > 0 ? (c / n * 7) : 0;
+    const freq = c > 0 ? (c / weeks) : 0;
     const gap = c > 0 ? (n / c) : null;
     const last = lastDate[p] ? md(lastDate[p]) : '—';
     return '<tr><td><span class="dot" style="background:' + PART_COLORS[p] + '"></span>' + p + '</td>'
@@ -906,51 +911,48 @@ function workoutBlock(days){
 
   return ''
     + '<section class="sec">'
-    +   '<div class="sec-head"><h3>② 锻炼</h3><span class="hint">共 ' + total + ' 次 · 休息 ' + restDays + ' 天</span></div>'
+    +   '<div class="sec-head"><h3>② 锻炼</h3><span class="hint">共 ' + total + ' 次 · 休息 ' + restDays + ' 天 · ' + weeks + ' 周</span></div>'
     +   '<div class="sec-body">'
     +     '<div class="legend">' + PARTS.map(p => '<span><i style="background:' + PART_COLORS[p] + '"></i>' + p + '</span>').join('') + '</div>'
     +     '<div class="chart-box">' + chartWorkout(daily) + '</div>'
     +     '<table class="tbl"><thead><tr><th>部位</th><th>次数</th><th>频次(次/周)</th><th>间隔(天)</th><th>最近</th></tr></thead><tbody>' + rows + '</tbody></table>'
-    +     '<div class="card-sub" style="margin-top:6px">间隔天数 = 统计天数 ÷ 该部位次数；0 次的部位不显示间隔。</div>'
+    +     '<div class="card-sub" style="margin-top:6px">图中每行一个部位、每列一天，圆点表示当天练了该部位。频次 = 周期内总次数 ÷ 总周数，周以周日到周六计，不足一周按一周算（本期 ' + weeks + ' 周）；间隔天数 = 统计天数 ÷ 该部位次数。</div>'
     +   '</div>'
     + '</section>';
 }
 
 function chartWorkout(daily){
   if (!daily.length) return emptyChart('区间内没有数据');
-  const totals = daily.map(x => x.parts.length);
-  const maxV = Math.max(1, Math.max(...totals));
-
-  const W = Math.max(640, daily.length * 40 + 80), H = 230;
-  const P = { l: 34, r: 14, t: 14, b: 46 };
+  const W = Math.max(660, daily.length * 26 + 84), H = 7 * 28 + 62;
+  const P = { l: 62, r: 16, t: 14, b: 42 };
   const pw = W - P.l - P.r, ph = H - P.t - P.b;
   const gw = pw / daily.length;
-  const bw = Math.max(6, Math.min(24, gw * 0.56));
-  const y = v => P.t + ph - (v / maxV) * ph;
+  const rowH = ph / PARTS.length;
+  const dotR = Math.max(3.5, Math.min(9, Math.min(gw, rowH) * 0.33));
   const step = Math.ceil(daily.length / 12);
   const size = svgSize(W, H);
 
   let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg">';
-  for (let i = 0; i <= maxV; i++) {
-    if (maxV > 4 && i % 2 !== 0) continue;
-    const yy = y(i);
-    s += '<line x1="' + P.l + '" y1="' + yy + '" x2="' + (W - P.r) + '" y2="' + yy + '" stroke="#EDF0F4"/>';
-    s += '<text x="' + (P.l - 7) + '" y="' + (yy + 3.5) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + i + '</text>';
-  }
+  // 每个部位一行
+  PARTS.forEach((p, idx) => {
+    const cy = P.t + rowH * idx + rowH / 2;
+    s += '<line x1="' + P.l + '" y1="' + cy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + cy.toFixed(1) + '" stroke="#F2F5F8"/>';
+    s += '<text x="' + (P.l - 8) + '" y="' + (cy + 3.5).toFixed(1) + '" font-size="10.5" fill="#6B7785" text-anchor="end">' + p + '</text>';
+  });
+  // 每天练到的部位打点
   daily.forEach((x, i) => {
     const cx = P.l + gw * i + gw / 2;
-    let acc = 0;
     x.parts.forEach(p => {
-      const h = (1 / maxV) * ph;
-      const yy = y(acc + 1);
-      s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (h - 1).toFixed(1) + '" rx="2" fill="' + PART_COLORS[p] + '"/>';
-      acc++;
+      const idx = PARTS.indexOf(p);
+      if (idx < 0) return;
+      const cy = P.t + rowH * idx + rowH / 2;
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + dotR.toFixed(1) + '" fill="' + PART_COLORS[p] + '"/>';
     });
     if (i % step === 0) {
-      s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 15) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 18) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
     }
   });
-  s += '<line x1="' + P.l + '" y1="' + (P.t + ph) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph) + '" stroke="#DCE2E9"/>';
+  s += '<line x1="' + P.l + '" y1="' + (P.t + ph).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph).toFixed(1) + '" stroke="#DCE2E9"/>';
   s += '</svg>';
   return s;
 }
