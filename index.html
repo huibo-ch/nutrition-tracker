@@ -490,11 +490,14 @@ function workoutOf(date){ return DB.workouts.find(w => w.date === date); }
 function sleepOf(date){ return DB.sleeps.find(s => s.date === date); }
 
 /* ---------- 全局 UI 状态 ---------- */
+/* 统计起点：从 2026-10-23 开始记录，更早的日期没有意义 */
+const TRACK_START = '2026-10-23';
+
 const state = {
   tab: 'today',
   date: todayStr(),
   meal: '早餐',
-  from: addDays(todayStr(), -6),
+  from: (addDays(todayStr(), -6) < TRACK_START ? TRACK_START : addDays(todayStr(), -6)),
   to: todayStr(),
   nutriMode: 'p'
 };
@@ -859,7 +862,7 @@ function statsView(){
     +   '<div class="sec-head"><h3>统计区间</h3><span class="hint">四个图共用</span></div>'
     +   '<div class="sec-body">'
     +     '<div class="range">'
-    +       '<input type="date" value="' + state.from + '" onchange="setRangeFrom(this.value)">'
+    +       '<input type="date" value="' + state.from + '" min="' + TRACK_START + '" onchange="setRangeFrom(this.value)">'
     +       '<span style="color:var(--text2)">至</span>'
     +       '<input type="date" value="' + state.to + '" onchange="setRangeTo(this.value)">'
     +     '</div>'
@@ -870,8 +873,8 @@ function statsView(){
     + sleepBlock(days)
     + weightBlock(days);
 }
-function setRangeFrom(v){ if (!v) return; if (v > state.to) state.to = v; state.from = v; render(); }
-function setRangeTo(v){ if (!v) return; if (v < state.from) state.from = v; state.to = v; render(); }
+function setRangeFrom(v){ if (!v) return; if (v < TRACK_START) v = TRACK_START; if (v > state.to) state.to = v; state.from = v; render(); }
+function setRangeTo(v){ if (!v) return; if (v < TRACK_START) v = TRACK_START; if (v < state.from) state.from = v; state.to = v; render(); }
 
 /* ---------- 图 1：营养 ---------- */
 function nutritionBlock(days){
