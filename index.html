@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#3A6B8A">
+<meta name="theme-color" content="#E8862E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="增重记录">
 <title>增重营养记录</title>
 <style>
 :root{
-  --bg:#F6F7F9; --card:#FFFFFF; --text:#22303C; --text2:#7A8794; --line:#E7EBF0;
-  --primary:#3A6B8A; --p:#3E5C6B; --c:#9A7250; --ok:#5E8C6A; --warn:#C4655E;
-  --p-l:#8CA6B4; --c-l:#C6A886; --radius:14px;
+  --bg:#F5F2ED; --card:#FFFFFF; --text:#2E2A25; --text2:#8C857C; --line:#EBE6DF;
+  --primary:#E8862E; --p:#E8862E; --c:#EFC244; --ok:#7FA86B; --warn:#D4674F;
+  --p-l:#F5C08A; --c-l:#F6DA9A; --radius:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -27,7 +27,7 @@ b,strong{font-variant-numeric:tabular-nums}
 .num{font-variant-numeric:tabular-nums}
 
 /* 顶部 */
-.topbar{position:sticky;top:0;z-index:30;background:rgba(246,247,249,.94);backdrop-filter:blur(8px);
+.topbar{position:sticky;top:0;z-index:30;background:rgba(245,242,237,.94);backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);padding:10px 0 8px}
 .topbar .inner{max-width:760px;margin:0 auto;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .brand{font-size:15px;font-weight:600;letter-spacing:.3px}
@@ -58,8 +58,8 @@ b,strong{font-variant-numeric:tabular-nums}
 .card-value small{font-size:12px;font-weight:400;color:var(--text2);margin-left:2px}
 .card-sub{font-size:11.5px;color:var(--text2)}
 .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.tag{font-size:11px;color:var(--primary);background:#EDF3F7;border-radius:6px;padding:1px 6px}
-.bar{height:7px;background:#EEF1F5;border-radius:99px;overflow:hidden;margin:8px 0 6px}
+.tag{font-size:11px;color:var(--primary);background:#FBEEE0;border-radius:6px;padding:1px 6px}
+.bar{height:7px;background:#F1EDE7;border-radius:99px;overflow:hidden;margin:8px 0 6px}
 .bar i{display:block;height:100%;border-radius:99px;background:var(--p);transition:width .3s}
 .bar.c i{background:var(--c)}
 .bar.done i{background:var(--ok)}
@@ -94,7 +94,7 @@ select,input[type=number],input[type=text],input[type=time],input[type=password]
   border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0;width:100%;
   -webkit-appearance:none;appearance:none
 }
-select{background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237A8794'/%3E%3C/svg%3E");
+select{background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238C857C'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
 input:focus,select:focus{outline:none;border-color:var(--primary)}
 .btn{border:none;background:var(--primary);color:#fff;border-radius:10px;padding:10px 16px;font-size:14.5px;
@@ -114,7 +114,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .log .name{flex:1;min-width:0;font-size:14px}
 .log .name em{font-style:normal;color:var(--text2);font-size:12px;margin-left:5px}
 .log .nut{font-size:12px;color:var(--text2);white-space:nowrap;font-variant-numeric:tabular-nums}
-.log .del{width:26px;height:26px;border:none;background:#F3F5F8;color:var(--text2);border-radius:8px;
+.log .del{width:26px;height:26px;border:none;background:#F6F2EC;color:var(--text2);border-radius:8px;
   font-size:15px;line-height:1;cursor:pointer;flex:none}
 .empty{color:var(--text2);font-size:13px;text-align:center;padding:16px 0}
 
@@ -122,7 +122,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .switch{position:relative;width:48px;height:28px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
-.switch i{position:absolute;inset:0;background:#DDE3EA;border-radius:99px;transition:.2s}
+.switch i{position:absolute;inset:0;background:#E3DED7;border-radius:99px;transition:.2s}
 .switch i:after{content:"";position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;
   top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .switch input:checked + i{background:var(--primary)}
@@ -130,7 +130,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;font-size:13.5px;
   color:var(--text2);cursor:pointer;font-family:inherit;transition:.15s}
-.chip.on{background:#EDF3F7;border-color:var(--primary);color:var(--primary);font-weight:500}
+.chip.on{background:#FBEEE0;border-color:var(--primary);color:var(--primary);font-weight:500}
 .chips.off{opacity:.45;pointer-events:none}
 
 /* 睡眠 */
@@ -138,7 +138,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px}
 .info-btn{width:18px;height:18px;border-radius:50%;border:1px solid var(--text2);background:#fff;
   color:var(--text2);font-size:11px;line-height:1;cursor:pointer;padding:0;font-family:inherit;vertical-align:1px}
-.notice{margin-top:8px;background:#F4F7F9;border:1px solid var(--line);border-radius:10px;padding:9px 10px;
+.notice{margin-top:8px;background:#FAF7F2;border:1px solid var(--line);border-radius:10px;padding:9px 10px;
   font-size:12.5px;color:var(--text2);line-height:1.55}
 
 /* 底部 tab */
@@ -163,7 +163,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .field + .field{margin-top:12px}
 .unit-row{display:grid;grid-template-columns:1fr 74px 74px 26px;gap:6px;align-items:center;margin-bottom:7px}
 .unit-row input{padding:8px 9px;font-size:14px}
-.unit-row .del{border:none;background:#F3F5F8;color:var(--text2);border-radius:8px;height:34px;cursor:pointer;font-size:15px}
+.unit-row .del{border:none;background:#F6F2EC;color:var(--text2);border-radius:8px;height:34px;cursor:pointer;font-size:15px}
 .unit-head{display:grid;grid-template-columns:1fr 74px 74px 26px;gap:6px;font-size:11px;color:var(--text2);margin-bottom:4px}
 .sub-t{font-size:12px;color:var(--text2);margin:12px 0 6px;display:flex;justify-content:space-between;align-items:center}
 
@@ -175,7 +175,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .food-acts button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;font-size:12px;
   color:var(--text2);cursor:pointer;font-family:inherit}
 .unit-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.unit-tag{font-size:11.5px;color:var(--text2);background:#F5F7FA;border-radius:7px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.unit-tag{font-size:11.5px;color:var(--text2);background:#F7F3ED;border-radius:7px;padding:3px 8px;font-variant-numeric:tabular-nums}
 .unit-tag b{color:var(--text);font-weight:600}
 
 /* 统计 */
@@ -184,9 +184,9 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .quicks{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .quicks button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;font-size:12.5px;
   color:var(--text2);cursor:pointer;font-family:inherit}
-.quicks button.on{background:#EDF3F7;border-color:var(--primary);color:var(--primary)}
+.quicks button.on{background:#FBEEE0;border-color:var(--primary);color:var(--primary)}
 .sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:9px;margin:12px 0 4px}
-.sum{background:#F8FAFB;border-radius:11px;padding:10px 12px}
+.sum{background:#FAF6F1;border-radius:11px;padding:10px 12px}
 .sum .t{font-size:11.5px;color:var(--text2)}
 .sum .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:1px}
 .sum .s{font-size:11px;color:var(--text2);margin-top:1px}
@@ -194,7 +194,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 2px;font-size:11.5px;color:var(--text2)}
 .legend span{display:flex;align-items:center;gap:4px}
 .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
-.legend i.lg-dash{background:transparent;border:1.3px dashed #8CA6B4;box-sizing:border-box}
+.legend i.lg-dash{background:transparent;border:1.3px dashed #D5D0C8;box-sizing:border-box}
 table.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
 table.tbl th,table.tbl td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 table.tbl th:first-child,table.tbl td:first-child{text-align:left}
@@ -261,16 +261,15 @@ table.tbl tr:last-child td{border-bottom:none}
 
 const LS_KEY = 'nutri_v1';
 const PARTS = ['胸','肩中束','肩后束','肱三头','肱二头','背','腿'];
-const PART_COLORS = {'胸':'#55707F','肩中束':'#7B94A2','肩后束':'#9DB3BE','肱三头':'#78876F','肱二头':'#A4886A','背':'#807690','腿':'#A2787A'};
-/* 图表色板：低饱和莫兰迪，统一明度层级 */
+const PART_COLORS = {'胸':'#EFA45F','肩中束':'#F3BC77','肩后束':'#F2CE7B','肱三头':'#CFD68A','肱二头':'#AFCB96','背':'#9CBEDC','腿':'#BBAFDC'};
+/* 图表色板：暖橙主色 + 灰色目标柱，部位色取自参考界面的环图并整体淡化一档 */
 const PALETTE = {
-  p: '#3E5C6B', pLine: '#8CA6B4',        // 蛋白质：实际柱 / 目标折线
-  c: '#9A7250', cLine: '#C6A886',        // 碳水：实际柱 / 目标折线
-  ink: '#5A7382',                        // 主折线（入睡 / 体重）
-  bar: '#DCE3E8',                        // 浅色柱（睡眠时长）
-  warm: '#9A7250',                       // 强调点（称重日）
-  mean: '#8E9AA4',                       // 均值虚线
-  grid: '#EFF2F5', axis: '#E1E5EA', label: '#98A2AC', strong: '#6B7785'
+  p: '#7FA86B', c: '#EFC244',            // 实际：蛋白质（同首页达标绿）/ 碳水黄
+  target: '#D4674F',                     // 目标：红色加粗虚线折线
+  sleep: '#E9A469', sleepBar: '#F7E7D7', sleepLab: '#BE7635', // 睡眠：入睡折线 / 时长柱 / 数据标签
+  weight: '#DCAE7E', warm: '#E8862E',    // 体重折线 / 称重点
+  mean: '#B8AFA4',                       // 均值虚线
+  grid: '#F1EDE7', axis: '#E4DFD8', label: '#A69E94', strong: '#7A736B'
 };
 const MEALS = ['早餐','午餐','晚餐','加餐'];
 
@@ -753,11 +752,6 @@ function delFood(id){
    ============================================================ */
 function statsView(){
   const days = daysBetween(state.from, state.to);
-  const qs = [['7 天', 7], ['30 天', 30], ['90 天', 90]];
-  const quickBtns = qs.map(([label, n]) => {
-    const on = (state.to === todayStr() && state.from === addDays(state.to, -(n-1)));
-    return '<button class="' + (on ? 'on' : '') + '" onclick="quickRange(' + n + ')">' + label + '</button>';
-  }).join('');
 
   return ''
     + '<section class="sec" style="margin-top:12px">'
@@ -768,7 +762,6 @@ function statsView(){
     +       '<span style="color:var(--text2)">至</span>'
     +       '<input type="date" value="' + state.to + '" onchange="setRangeTo(this.value)">'
     +     '</div>'
-    +     '<div class="quicks">' + quickBtns + '<button onclick="quickMonth()">本月</button></div>'
     +   '</div>'
     + '</section>'
     + nutritionBlock(days)
@@ -776,8 +769,6 @@ function statsView(){
     + sleepBlock(days)
     + weightBlock(days);
 }
-function quickRange(n){ state.to = todayStr(); state.from = addDays(state.to, -(n-1)); render(); }
-function quickMonth(){ const t = todayStr(); state.to = t; state.from = t.slice(0,8) + '01'; render(); }
 function setRangeFrom(v){ if (!v) return; if (v > state.to) state.to = v; state.from = v; render(); }
 function setRangeTo(v){ if (!v) return; if (v < state.from) state.from = v; state.to = v; render(); }
 
@@ -812,11 +803,11 @@ function nutritionBlock(days){
     +       '<div class="sum"><div class="t">日均' + name + '</div><div class="v">' + fmt(dayAct, 0) + ' / ' + fmt(dayTar, 0) + ' <span style="font-size:12px;color:var(--text2)">g</span></div><div class="s">日均缺口 ' + fmt(dayGap, 1) + ' g / 缺口率 ' + dayGapRate + '%</div></div>'
     +     '</div>'
     +     '<div class="legend">'
-    +       '<span><i style="background:' + (isP ? PALETTE.pLine : PALETTE.cLine) + '"></i>' + name + '目标（折线）</span>'
-    +       '<span><i style="background:' + (isP ? PALETTE.p : PALETTE.c) + '"></i>' + name + '实际（柱形）</span>'
+    +       '<span><i class="lg-dash" style="border-color:' + PALETTE.target + ';border-width:2px"></i>' + name + '目标</span>'
+    +       '<span><i style="background:' + (isP ? PALETTE.p : PALETTE.c) + '"></i>' + name + '实际</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartNutrition(data, mode) + '</div>'
-    +     '<div class="card-sub" style="margin-top:4px">柱顶与折线之间的数字为当日差值＝目标−实际，负数表示还差，正数表示已超出；未记录饮食的日期实际值按 0 计。</div>'
+    +     '<div class="card-sub" style="margin-top:4px">红色虚线为目标，柱形为实际；柱顶上方数字为当日差值＝目标−实际，负数（红）表示还差，正数（黑）表示已超出；未记录饮食的日期实际值按 0 计。</div>'
     +   '</div>'
     + '</section>';
 }
@@ -826,7 +817,7 @@ function chartNutrition(data, mode){
   if (!data.length) return emptyChart('区间内没有数据');
   const isP = mode !== 'c';
   const barColor = isP ? PALETTE.p : PALETTE.c;
-  const lineColor = isP ? PALETTE.pLine : PALETTE.cLine;
+  const lineColor = PALETTE.target;
 
   let maxV = Math.max(20, ...data.flatMap(x => [x.tar, x.act]));
   maxV = Math.ceil(maxV / 20) * 20;
@@ -835,7 +826,7 @@ function chartNutrition(data, mode){
   const P = { l: 46, r: 14, t: 30, b: 54 };
   const pw = W - P.l - P.r, ph = H - P.t - P.b;
   const gw = pw / data.length;
-  const bw = Math.max(6, Math.min(30, gw * 0.52));
+  const bw = Math.max(6, Math.min(30, gw * 0.5));
   const y = v => P.t + ph - (v / maxV) * ph;
   const base = P.t + ph;
   const cxOf = i => P.l + gw * i + gw / 2;
@@ -843,11 +834,6 @@ function chartNutrition(data, mode){
   const size = svgSize(W, H);
 
   let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
-  // 柱形微渐变：同色由顶到底略微加深，避免平涂的塑料感
-  s += '<defs><linearGradient id="gNutri" x1="0" y1="0" x2="0" y2="1">'
-    + '<stop offset="0" stop-color="' + barColor + '" stop-opacity="0.72"/>'
-    + '<stop offset="1" stop-color="' + barColor + '" stop-opacity="1"/>'
-    + '</linearGradient></defs>';
   // 网格
   for (let i = 0; i <= 4; i++) {
     const v = maxV * i / 4, yy = y(v);
@@ -855,26 +841,24 @@ function chartNutrition(data, mode){
     s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5) + '" font-size="10" fill="' + PALETTE.label + '" text-anchor="end">' + Math.round(v) + '</text>';
   }
 
-  // 柱形：实际值
+  // 实际柱
   data.forEach((x, i) => {
-    const cx = cxOf(i), by = y(x.act), h = Math.max(0, base - by);
-    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="url(#gNutri)"/>';
+    const cx = cxOf(i), ay = y(x.act), h = Math.max(0, base - ay);
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + ay.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + barColor + '"/>';
   });
 
-  // 折线：目标值
+  // 目标：红色虚线折线（加粗）
   let path = '';
   data.forEach((x, i) => { path += (i ? 'L' : 'M') + cxOf(i).toFixed(1) + ' ' + y(x.tar).toFixed(1) + ' '; });
-  s += '<path d="' + path + '" fill="none" stroke="' + lineColor + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
-  data.forEach((x, i) => {
-    s += '<circle cx="' + cxOf(i).toFixed(1) + '" cy="' + y(x.tar).toFixed(1) + '" r="3" fill="#fff" stroke="' + lineColor + '" stroke-width="2"/>';
-  });
+  s += '<path d="' + path + '" fill="none" stroke="' + lineColor + '" stroke-width="2.8" stroke-dasharray="7 5" stroke-linejoin="round" stroke-linecap="round"/>';
 
-  // 折线与柱顶之间标注差值（目标 − 实际）
+  // 柱顶上方标注差值（目标 − 实际）：还差→红色负数，超出→黑色正数
   data.forEach((x, i) => {
     const gap = r1(x.tar - x.act);
     const txt = gap > 0 ? '-' + Math.round(gap) : gap < 0 ? '+' + Math.round(-gap) : '0';
-    const ty = (y(x.tar) + y(x.act)) / 2 + 3;
-    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="9.5" font-weight="700" fill="' + barColor + '" stroke="#fff" stroke-width="2.4" paint-order="stroke" text-anchor="middle">' + txt + '</text>';
+    const col = gap > 0 ? PALETTE.target : PALETTE.strong;
+    const ty = y(x.act) - 7;
+    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="9.5" font-weight="700" fill="' + col + '" stroke="#fff" stroke-width="2.4" paint-order="stroke" text-anchor="middle">' + txt + '</text>';
   });
 
   // X 轴
@@ -1011,8 +995,8 @@ function sleepBlock(days){
     +   '<div class="sec-body">'
     +     stat
     +     '<div class="legend">'
-    +       '<span><i style="background:' + PALETTE.ink + '"></i>入睡时刻</span>'
-    +       '<span><i style="background:' + PALETTE.bar + '"></i>睡眠时长</span>'
+    +       '<span><i style="background:' + PALETTE.sleep + '"></i>入睡时刻</span>'
+    +       '<span><i style="background:' + PALETTE.sleepBar + '"></i>睡眠时长</span>'
     +       '<span><i style="background:' + PALETTE.mean + '"></i>均值线</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartSleep(days) + '</div>'
@@ -1041,6 +1025,7 @@ function chartSleep(days){
   const yT = m => P.t + (m - lo) / (hi - lo) * ph;          // 时刻：早在上
   const yD = v => P.t + ph - (v / maxDur) * ph;             // 时长：从底向上
   const step = Math.ceil(days.length / 12);
+  const labStep = days.length <= 16 ? 1 : step;   // 天数多时间隔标值，避免重叠
   const size = svgSize(W, H);
 
   let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg">';
@@ -1065,7 +1050,10 @@ function chartSleep(days){
     const cx = P.l + gw * i + gw / 2;
     const v = Number(x.s.durH) || 0;
     const yy = yD(v);
-    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (P.t + ph - yy).toFixed(1) + '" rx="2" fill="' + PALETTE.bar + '"/>';
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (P.t + ph - yy).toFixed(1) + '" rx="2" fill="' + PALETTE.sleepBar + '"/>';
+    if (i % labStep === 0) {
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (yy - 5).toFixed(1) + '" font-size="10" font-weight="600" fill="' + PALETTE.sleepLab + '" stroke="#fff" stroke-width="2.6" paint-order="stroke" text-anchor="middle">' + fmt(v, 1) + 'h</text>';
+    }
   });
 
   // 入睡折线（无记录断开）
@@ -1077,14 +1065,17 @@ function chartSleep(days){
     path += (prev ? 'L' : 'M') + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ';
     prev = true;
   });
-  if (path) s += '<path d="' + path + '" fill="none" stroke="' + PALETTE.ink + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  if (path) s += '<path d="' + path + '" fill="none" stroke="' + PALETTE.sleep + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
 
   // 点
   pts.forEach((x, i) => {
     if (!x.s) return;
     const cx = P.l + gw * i + gw / 2;
     const cy = yT(bedMins(x.s));
-    s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" fill="#fff" stroke="' + PALETTE.ink + '" stroke-width="2"/>';
+    s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" fill="#fff" stroke="' + PALETTE.sleep + '" stroke-width="2"/>';
+    if (i % labStep === 0) {
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (cy + 14).toFixed(1) + '" font-size="10" font-weight="600" fill="' + PALETTE.sleepLab + '" stroke="#fff" stroke-width="2.6" paint-order="stroke" text-anchor="middle">' + clockLabel(bedMins(x.s)) + '</text>';
+    }
   });
 
   // 均值线
@@ -1093,14 +1084,14 @@ function chartSleep(days){
     const m = avgBed < 720 ? avgBed + 1440 : avgBed;
     if (m >= lo && m <= hi) {
       const yy = yT(m);
-      s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="' + PALETTE.ink + '" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
-      s += '<text x="' + (W - P.r) + '" y="' + (yy - 5).toFixed(1) + '" font-size="10" fill="' + PALETTE.ink + '" text-anchor="end">均值 ' + clockLabel(m) + '</text>';
+      s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="' + PALETTE.sleep + '" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
+      s += '<text x="' + (W - P.r) + '" y="' + (yy - 5).toFixed(1) + '" font-size="10" fill="' + PALETTE.sleep + '" stroke="#fff" stroke-width="2.2" paint-order="stroke" text-anchor="end">均值 ' + clockLabel(m) + '</text>';
     }
   }
   const avgDur = has.reduce((a, x) => a + (Number(x.s.durH) || 0), 0) / has.length;
   const yy2 = yD(avgDur);
   s += '<line x1="' + P.l + '" y1="' + yy2.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy2.toFixed(1) + '" stroke="' + PALETTE.mean + '" stroke-width="1.2" stroke-dasharray="5 4" opacity=".75"/>';
-  s += '<text x="' + (P.l + 4) + '" y="' + (yy2 - 5).toFixed(1) + '" font-size="10" fill="' + PALETTE.mean + '">均值 ' + fmt(avgDur, 1) + 'h</text>';
+  s += '<text x="' + (W - P.r) + '" y="' + (yy2 + 13).toFixed(1) + '" font-size="10" fill="' + PALETTE.mean + '" stroke="#fff" stroke-width="2.2" paint-order="stroke" text-anchor="end">均值 ' + fmt(avgDur, 1) + 'h</text>';
 
   // X 轴
   pts.forEach((x, i) => {
@@ -1140,7 +1131,7 @@ function weightBlock(days){
     +   '<div class="sec-body">'
     +     stat
     +     '<div class="legend">'
-    +       '<span><i style="background:' + PALETTE.ink + '"></i>体重（每日生效值）</span>'
+    +       '<span><i style="background:' + PALETTE.weight + '"></i>体重（每日生效值）</span>'
     +       '<span><i style="background:' + PALETTE.warm + ';border-radius:50%"></i>称重日</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartWeight(vals) + '</div>'
@@ -1192,7 +1183,7 @@ function chartWeight(vals){
       const pk = seg[k - 1][1];
       d += ' L' + x(i).toFixed(1) + ' ' + y(pk).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(kg).toFixed(1);
     });
-    s += '<path d="' + d + '" fill="none" stroke="' + PALETTE.ink + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    s += '<path d="' + d + '" fill="none" stroke="' + PALETTE.weight + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
   });
 
   // 点：称重日实心并标数值
@@ -1206,7 +1197,7 @@ function chartWeight(vals){
         s += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" font-size="9" font-weight="600" fill="' + PALETTE.warm + '" text-anchor="middle">' + fmt(v.kg, 1) + '</text>';
       }
     } else {
-      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2" fill="#fff" stroke="' + PALETTE.ink + '" stroke-width="1.4"/>';
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2" fill="#fff" stroke="' + PALETTE.weight + '" stroke-width="1.4"/>';
     }
     if (i % step === 0) {
       s += '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="' + PALETTE.label + '" text-anchor="middle">' + md(v.d) + '</text>';
