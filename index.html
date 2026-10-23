@@ -107,8 +107,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .btn.small{padding:7px 12px;font-size:13px}
 .btn.danger{background:var(--warn)}
 .btn.block{width:100%}
-.entry{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.entry{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:1px solid #EFC79C;border-radius:12px;padding:10px 10px 11px}
 .entry .qty-row{display:grid;grid-template-columns:1fr auto;gap:8px;grid-column:1 / -1}
+.entry .entry-title{grid-column:1 / -1;font-size:12px;font-weight:600;color:var(--primary)}
+.entry.custom{grid-template-columns:1fr 1fr auto}
+.entry.custom .c-name{grid-column:1 / -1}
+@media (min-width:560px){
+  .entry.custom{grid-template-columns:1.5fr 1fr 1fr auto}
+  .entry.custom .c-name{grid-column:auto}
+}
 
 /* 记录列表 */
 .logs{margin-top:10px;border-top:1px solid var(--line);padding-top:2px}
@@ -460,30 +467,25 @@ function target(date){
   const cc = c ? Number(c.c) || 0 : 0;
   return { kg, tp: r1(kg * cp), tc: r1(kg * cc), cp, cc, wFrom: w ? w.date : null, cFrom: c ? c.date : null };
 }
+/* 一条记录的营养：食物库的按「单位营养 × 数量」；临时食物直接用填写的值 */
+function logNut(l){
+  if (!l) return { p: 0, c: 0 };
+  if (!l.foodId) return { p: r1(Number(l.p) || 0), c: r1(Number(l.c) || 0) };
+  const f = DB.foods.find(x => x.id === l.foodId);
+  if (!f) return { p: 0, c: 0 };
+  const u = f.units.find(x => x.name === l.unit);
+  if (!u) return { p: 0, c: 0 };
+  const q = Number(l.qty) || 0;
+  return { p: r1((Number(u.p) || 0) * q), c: r1((Number(u.c) || 0) * q) };
+}
 function intake(date){
   let p = 0, c = 0;
-  DB.logs.forEach(l => {
-    if (l.date !== date) return;
-    const f = DB.foods.find(x => x.id === l.foodId);
-    if (!f) return;
-    const u = f.units.find(x => x.name === l.unit);
-    if (!u) return;
-    p += (Number(u.p) || 0) * (Number(l.qty) || 0);
-    c += (Number(u.c) || 0) * (Number(l.qty) || 0);
-  });
+  DB.logs.forEach(l => { if (l.date !== date) return; const n = logNut(l); p += n.p; c += n.c; });
   return { p: r1(p), c: r1(c) };
 }
 function mealIntake(date, meal){
   let p = 0, c = 0;
-  DB.logs.forEach(l => {
-    if (l.date !== date || l.meal !== meal) return;
-    const f = DB.foods.find(x => x.id === l.foodId);
-    if (!f) return;
-    const u = f.units.find(x => x.name === l.unit);
-    if (!u) return;
-    p += (Number(u.p) || 0) * (Number(l.qty) || 0);
-    c += (Number(u.c) || 0) * (Number(l.qty) || 0);
-  });
+  DB.logs.forEach(l => { if (l.date !== date || l.meal !== meal) return; const n = logNut(l); p += n.p; c += n.c; });
   return { p: r1(p), c: r1(c) };
 }
 function workoutOf(date){ return DB.workouts.find(w => w.date === date); }
@@ -590,13 +592,13 @@ function dietSection(){
 
   const logs = DB.logs.filter(l => l.date === state.date && l.meal === state.meal);
   const list = logs.length ? logs.map(l => {
-    const f = DB.foods.find(x => x.id === l.foodId);
-    const u = f ? f.units.find(x => x.name === l.unit) : null;
-    const p = u ? r1((u.p || 0) * l.qty) : 0;
-    const c = u ? r1((u.c || 0) * l.qty) : 0;
+    const n = logNut(l);
+    const f = l.foodId ? DB.foods.find(x => x.id === l.foodId) : null;
+    const title = l.foodId ? (f ? f.name : '（已删除）') : (l.name || '临时食物');
+    const sub = l.foodId ? (l.qty + ' × ' + l.unit) : '直填';
     return '<div class="log">'
-      + '<div class="name">' + esc(f ? f.name : '（已删除）') + '<em>' + l.qty + ' × ' + esc(l.unit) + '</em></div>'
-      + '<div class="nut">蛋白 ' + fmt(p, 1) + ' · 碳水 ' + fmt(c, 1) + '</div>'
+      + '<div class="name">' + esc(title) + '<em>' + esc(sub) + '</em></div>'
+      + '<div class="nut">蛋白 ' + fmt(n.p, 1) + ' · 碳水 ' + fmt(n.c, 1) + '</div>'
       + '<button class="del" onclick="delLog(\'' + l.id + '\')">×</button>'
       + '</div>';
   }).join('') : '<div class="empty">' + state.meal + '还没有记录</div>';
@@ -607,6 +609,7 @@ function dietSection(){
     +   '<div class="sec-body">'
     +     '<div class="meal-tabs">' + tabs + '</div>'
     +     '<div class="entry">'
+    +       '<div class="entry-title">从食物库添加</div>'
     +       '<select id="in-food" onchange="onFoodChange()">' + foodOpts + '</select>'
     +       '<select id="in-unit"></select>'
     +       '<div class="qty-row">'
@@ -614,7 +617,14 @@ function dietSection(){
     +         '<button class="btn" onclick="addLog()">添加</button>'
     +       '</div>'
     +     '</div>'
-    +     (DB.foods.length ? '' : '<div class="notice">食物库还是空的，先到「食物库」页添加食物（名称 + 单位 + 每单位蛋白/碳水）。</div>')
+    +     '<div class="entry custom" style="margin-top:12px">'
+    +       '<div class="entry-title">不从食物库添加</div>'
+    +       '<input class="c-name" id="c-name" type="text" maxlength="30" placeholder="食物名称" onkeydown="if(event.key===\'Enter\')addCustomLog()">'
+    +       '<input id="c-p" type="number" inputmode="decimal" min="0" step="0.1" placeholder="蛋白质（g）" onkeydown="if(event.key===\'Enter\')addCustomLog()">'
+    +       '<input id="c-c" type="number" inputmode="decimal" min="0" step="0.1" placeholder="碳水（g）" onkeydown="if(event.key===\'Enter\')addCustomLog()">'
+    +       '<button class="btn" onclick="addCustomLog()">添加</button>'
+    +     '</div>'
+    +     (DB.foods.length ? '' : '<div class="notice">食物库还是空的，可以直接用下方「不从食物库添加」临时记录这一餐。</div>')
     +     '<div class="logs">' + list + '</div>'
     +   '</div>'
     + '</section>';
@@ -644,6 +654,24 @@ function addLog(){
   state.lastFood = fid;
   state.lastUnit = unit;
   DB.logs.push({ id: uid(), date: state.date, meal: state.meal, foodId: fid, unit, qty });
+  saveDB();
+  render();
+  toast('已添加');
+}
+/* 不进食物库，直接按填写的蛋白/碳水记一条 */
+function addCustomLog(){
+  const nameEl = $('c-name'), pEl = $('c-p'), cEl = $('c-c');
+  const name = ((nameEl && nameEl.value) || '').trim();
+  const pv = parseFloat(pEl ? pEl.value : '');
+  const cv = parseFloat(cEl ? cEl.value : '');
+  const p = isNaN(pv) ? 0 : pv;
+  const c = isNaN(cv) ? 0 : cv;
+  if (!name) return toast('请填写食物名称');
+  if (p <= 0 && c <= 0) return toast('请填写蛋白质或碳水含量');
+  DB.logs.push({
+    id: uid(), date: state.date, meal: state.meal,
+    foodId: '', name: name.slice(0, 30), p: r1(p), c: r1(c), qty: 1, unit: '份', custom: true
+  });
   saveDB();
   render();
   toast('已添加');
