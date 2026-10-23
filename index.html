@@ -544,7 +544,7 @@ function todayView(){
 
   const weightCard = ''
     + '<div class="card wide" onclick="openGoalModal()" style="cursor:pointer">'
-    +   '<div class="card-head"><span class="card-label">体重 · 目标设置</span><span class="tag">点击修改</span></div>'
+    +   '<div class="card-head"><span class="card-label">当日体重</span><span class="tag">点击修改</span></div>'
     +   '<div class="card-value">' + (t.wFrom ? fmt(t.kg, 1) + '<small>kg</small>' : '未设置') + '</div>'
     +   '<div class="card-sub">' + (t.wFrom
           ? (t.wFrom === state.date ? '本日录入' : '自 ' + md(t.wFrom) + ' 起沿用')
@@ -571,7 +571,7 @@ function todayView(){
     + '</div>';
 
   return ''
-    + (noGoal && !t.wFrom ? '<div class="notice" style="margin-top:12px">欢迎使用。第一步：点击下方「体重 · 目标设置」录入体重和系数（蛋白质系数建议 1.6–2.2 g/kg，碳水 4–6 g/kg），系统会按 体重×系数 生成每日目标。</div>' : '')
+    + (noGoal && !t.wFrom ? '<div class="notice" style="margin-top:12px">欢迎使用。第一步：点击下方「当日体重」录入体重和系数（蛋白质系数建议 1.6–2.2 g/kg，碳水 4–6 g/kg），系统会按 体重×系数 生成每日目标。</div>' : '')
     + '<div class="cards">' + weightCard + proteinCard + carbCard + '</div>'
     + dietSection() + workoutSection() + sleepSection();
 }
