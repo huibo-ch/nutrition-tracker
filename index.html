@@ -10,8 +10,8 @@
 <style>
 :root{
   --bg:#F6F7F9; --card:#FFFFFF; --text:#22303C; --text2:#7A8794; --line:#E7EBF0;
-  --primary:#3A6B8A; --p:#3F6E8C; --c:#B5764A; --ok:#5E8C6A; --warn:#C4655E;
-  --p-l:#A8C6DA; --c-l:#E8CBAE; --radius:14px;
+  --primary:#3A6B8A; --p:#3E5C6B; --c:#9A7250; --ok:#5E8C6A; --warn:#C4655E;
+  --p-l:#8CA6B4; --c-l:#C6A886; --radius:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -194,7 +194,7 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 2px;font-size:11.5px;color:var(--text2)}
 .legend span{display:flex;align-items:center;gap:4px}
 .legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
-.legend i.lg-dash{background:transparent;border:1.3px dashed #A8C6DA;box-sizing:border-box}
+.legend i.lg-dash{background:transparent;border:1.3px dashed #8CA6B4;box-sizing:border-box}
 table.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
 table.tbl th,table.tbl td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 table.tbl th:first-child,table.tbl td:first-child{text-align:left}
@@ -261,7 +261,17 @@ table.tbl tr:last-child td{border-bottom:none}
 
 const LS_KEY = 'nutri_v1';
 const PARTS = ['胸','肩中束','肩后束','肱三头','肱二头','背','腿'];
-const PART_COLORS = {'胸':'#6B8F9E','肩中束':'#8FA9B8','肩后束':'#B3C6D2','肱三头':'#9EB08F','肱二头':'#C4A484','背':'#8B7E9E','腿':'#C99A9A'};
+const PART_COLORS = {'胸':'#55707F','肩中束':'#7B94A2','肩后束':'#9DB3BE','肱三头':'#78876F','肱二头':'#A4886A','背':'#807690','腿':'#A2787A'};
+/* 图表色板：低饱和莫兰迪，统一明度层级 */
+const PALETTE = {
+  p: '#3E5C6B', pLine: '#8CA6B4',        // 蛋白质：实际柱 / 目标折线
+  c: '#9A7250', cLine: '#C6A886',        // 碳水：实际柱 / 目标折线
+  ink: '#5A7382',                        // 主折线（入睡 / 体重）
+  bar: '#DCE3E8',                        // 浅色柱（睡眠时长）
+  warm: '#9A7250',                       // 强调点（称重日）
+  mean: '#8E9AA4',                       // 均值虚线
+  grid: '#EFF2F5', axis: '#E1E5EA', label: '#98A2AC', strong: '#6B7785'
+};
 const MEALS = ['早餐','午餐','晚餐','加餐'];
 
 /* ---------- 工具 ---------- */
@@ -802,8 +812,8 @@ function nutritionBlock(days){
     +       '<div class="sum"><div class="t">日均' + name + '</div><div class="v">' + fmt(dayAct, 0) + ' / ' + fmt(dayTar, 0) + ' <span style="font-size:12px;color:var(--text2)">g</span></div><div class="s">日均缺口 ' + fmt(dayGap, 1) + ' g / 缺口率 ' + dayGapRate + '%</div></div>'
     +     '</div>'
     +     '<div class="legend">'
-    +       '<span><i style="background:' + (isP ? '#8FB6CE' : '#DCB68F') + '"></i>' + name + '目标（折线）</span>'
-    +       '<span><i style="background:' + (isP ? '#3F6E8C' : '#B5764A') + '"></i>' + name + '实际（柱形）</span>'
+    +       '<span><i style="background:' + (isP ? PALETTE.pLine : PALETTE.cLine) + '"></i>' + name + '目标（折线）</span>'
+    +       '<span><i style="background:' + (isP ? PALETTE.p : PALETTE.c) + '"></i>' + name + '实际（柱形）</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartNutrition(data, mode) + '</div>'
     +     '<div class="card-sub" style="margin-top:4px">柱顶与折线之间的数字为当日差值＝目标−实际，负数表示还差，正数表示已超出；未记录饮食的日期实际值按 0 计。</div>'
@@ -815,8 +825,8 @@ function setNutriMode(m){ state.nutriMode = m; render(); }
 function chartNutrition(data, mode){
   if (!data.length) return emptyChart('区间内没有数据');
   const isP = mode !== 'c';
-  const barColor = isP ? '#3F6E8C' : '#B5764A';
-  const lineColor = isP ? '#8FB6CE' : '#DCB68F';
+  const barColor = isP ? PALETTE.p : PALETTE.c;
+  const lineColor = isP ? PALETTE.pLine : PALETTE.cLine;
 
   let maxV = Math.max(20, ...data.flatMap(x => [x.tar, x.act]));
   maxV = Math.ceil(maxV / 20) * 20;
@@ -833,17 +843,22 @@ function chartNutrition(data, mode){
   const size = svgSize(W, H);
 
   let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+  // 柱形微渐变：同色由顶到底略微加深，避免平涂的塑料感
+  s += '<defs><linearGradient id="gNutri" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="' + barColor + '" stop-opacity="0.72"/>'
+    + '<stop offset="1" stop-color="' + barColor + '" stop-opacity="1"/>'
+    + '</linearGradient></defs>';
   // 网格
   for (let i = 0; i <= 4; i++) {
     const v = maxV * i / 4, yy = y(v);
-    s += '<line x1="' + P.l + '" y1="' + yy + '" x2="' + (W - P.r) + '" y2="' + yy + '" stroke="#EDF0F4" stroke-width="1"/>';
-    s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + Math.round(v) + '</text>';
+    s += '<line x1="' + P.l + '" y1="' + yy + '" x2="' + (W - P.r) + '" y2="' + yy + '" stroke="' + PALETTE.grid + '" stroke-width="1"/>';
+    s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5) + '" font-size="10" fill="' + PALETTE.label + '" text-anchor="end">' + Math.round(v) + '</text>';
   }
 
   // 柱形：实际值
   data.forEach((x, i) => {
     const cx = cxOf(i), by = y(x.act), h = Math.max(0, base - by);
-    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + barColor + '"/>';
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="url(#gNutri)"/>';
   });
 
   // 折线：目标值
@@ -865,9 +880,9 @@ function chartNutrition(data, mode){
   // X 轴
   data.forEach((x, i) => {
     if (i % step !== 0) return;
-    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
+    s += '<text x="' + cxOf(i).toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="' + PALETTE.label + '" text-anchor="middle">' + md(x.d) + '</text>';
   });
-  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="#DCE2E9" stroke-width="1"/>';
+  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="' + PALETTE.axis + '" stroke-width="1"/>';
   s += '</svg>';
   return s;
 }
@@ -936,8 +951,8 @@ function chartWorkout(daily){
   // 每个部位一行
   PARTS.forEach((p, idx) => {
     const cy = P.t + rowH * idx + rowH / 2;
-    s += '<line x1="' + P.l + '" y1="' + cy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + cy.toFixed(1) + '" stroke="#F2F5F8"/>';
-    s += '<text x="' + (P.l - 8) + '" y="' + (cy + 3.5).toFixed(1) + '" font-size="10.5" fill="#6B7785" text-anchor="end">' + p + '</text>';
+    s += '<line x1="' + P.l + '" y1="' + cy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + cy.toFixed(1) + '" stroke="' + PALETTE.grid + '"/>';
+    s += '<text x="' + (P.l - 8) + '" y="' + (cy + 3.5).toFixed(1) + '" font-size="10.5" fill="' + PALETTE.strong + '" text-anchor="end">' + p + '</text>';
   });
   // 每天练到的部位打点
   daily.forEach((x, i) => {
@@ -949,10 +964,10 @@ function chartWorkout(daily){
       s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + dotR.toFixed(1) + '" fill="' + PART_COLORS[p] + '"/>';
     });
     if (i % step === 0) {
-      s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 18) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 18) + '" font-size="9.5" fill="' + PALETTE.label + '" text-anchor="middle">' + md(x.d) + '</text>';
     }
   });
-  s += '<line x1="' + P.l + '" y1="' + (P.t + ph).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph).toFixed(1) + '" stroke="#DCE2E9"/>';
+  s += '<line x1="' + P.l + '" y1="' + (P.t + ph).toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph).toFixed(1) + '" stroke="' + PALETTE.axis + '"/>';
   s += '</svg>';
   return s;
 }
@@ -996,9 +1011,9 @@ function sleepBlock(days){
     +   '<div class="sec-body">'
     +     stat
     +     '<div class="legend">'
-    +       '<span><i style="background:#6B8F9E"></i>入睡时刻</span>'
-    +       '<span><i style="background:#D9E5EC"></i>睡眠时长</span>'
-    +       '<span><i style="background:#B9B2A6"></i>均值线</span>'
+    +       '<span><i style="background:' + PALETTE.ink + '"></i>入睡时刻</span>'
+    +       '<span><i style="background:' + PALETTE.bar + '"></i>睡眠时长</span>'
+    +       '<span><i style="background:' + PALETTE.mean + '"></i>均值线</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartSleep(days) + '</div>'
     +     '<div class="card-sub" style="margin-top:4px">入睡时刻按「开始睡觉所在日期」归属；跨零点（23:30 → 01:00）在同一连续轴上显示。</div>'
@@ -1035,13 +1050,13 @@ function chartSleep(days){
   const tickStep = range <= 180 ? 30 : range <= 360 ? 60 : range <= 720 ? 120 : 180;
   for (let m = Math.ceil(lo / tickStep) * tickStep; m <= hi; m += tickStep) {
     const yy = yT(m);
-    s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="#EDF0F4"/>';
-    s += '<text x="' + (P.l - 7) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + clockLabel(m) + '</text>';
+    s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="' + PALETTE.grid + '"/>';
+    s += '<text x="' + (P.l - 7) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="' + PALETTE.label + '" text-anchor="end">' + clockLabel(m) + '</text>';
   }
   // 右轴：时长
   for (let i = 0; i <= maxDur; i += (maxDur > 8 ? 2 : 1)) {
     const yy = yD(i);
-    s += '<text x="' + (W - P.r + 7) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="#B9B2A6" text-anchor="start">' + i + 'h</text>';
+    s += '<text x="' + (W - P.r + 7) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="' + PALETTE.mean + '" text-anchor="start">' + i + 'h</text>';
   }
 
   // 时长柱
@@ -1050,7 +1065,7 @@ function chartSleep(days){
     const cx = P.l + gw * i + gw / 2;
     const v = Number(x.s.durH) || 0;
     const yy = yD(v);
-    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (P.t + ph - yy).toFixed(1) + '" rx="2" fill="#D9E5EC"/>';
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (P.t + ph - yy).toFixed(1) + '" rx="2" fill="' + PALETTE.bar + '"/>';
   });
 
   // 入睡折线（无记录断开）
@@ -1062,14 +1077,14 @@ function chartSleep(days){
     path += (prev ? 'L' : 'M') + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ';
     prev = true;
   });
-  if (path) s += '<path d="' + path + '" fill="none" stroke="#6B8F9E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  if (path) s += '<path d="' + path + '" fill="none" stroke="' + PALETTE.ink + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
 
   // 点
   pts.forEach((x, i) => {
     if (!x.s) return;
     const cx = P.l + gw * i + gw / 2;
     const cy = yT(bedMins(x.s));
-    s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" fill="#fff" stroke="#6B8F9E" stroke-width="2"/>';
+    s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3" fill="#fff" stroke="' + PALETTE.ink + '" stroke-width="2"/>';
   });
 
   // 均值线
@@ -1078,22 +1093,22 @@ function chartSleep(days){
     const m = avgBed < 720 ? avgBed + 1440 : avgBed;
     if (m >= lo && m <= hi) {
       const yy = yT(m);
-      s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="#6B8F9E" stroke-width="1.2" stroke-dasharray="5 4" opacity=".65"/>';
-      s += '<text x="' + (W - P.r) + '" y="' + (yy - 5).toFixed(1) + '" font-size="10" fill="#6B8F9E" text-anchor="end">均值 ' + clockLabel(m) + '</text>';
+      s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="' + PALETTE.ink + '" stroke-width="1.2" stroke-dasharray="5 4" opacity=".55"/>';
+      s += '<text x="' + (W - P.r) + '" y="' + (yy - 5).toFixed(1) + '" font-size="10" fill="' + PALETTE.ink + '" text-anchor="end">均值 ' + clockLabel(m) + '</text>';
     }
   }
   const avgDur = has.reduce((a, x) => a + (Number(x.s.durH) || 0), 0) / has.length;
   const yy2 = yD(avgDur);
-  s += '<line x1="' + P.l + '" y1="' + yy2.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy2.toFixed(1) + '" stroke="#B9B2A6" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>';
-  s += '<text x="' + (P.l + 4) + '" y="' + (yy2 - 5).toFixed(1) + '" font-size="10" fill="#B9B2A6">均值 ' + fmt(avgDur, 1) + 'h</text>';
+  s += '<line x1="' + P.l + '" y1="' + yy2.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy2.toFixed(1) + '" stroke="' + PALETTE.mean + '" stroke-width="1.2" stroke-dasharray="5 4" opacity=".75"/>';
+  s += '<text x="' + (P.l + 4) + '" y="' + (yy2 - 5).toFixed(1) + '" font-size="10" fill="' + PALETTE.mean + '">均值 ' + fmt(avgDur, 1) + 'h</text>';
 
   // X 轴
   pts.forEach((x, i) => {
     if (i % step !== 0) return;
     const cx = P.l + gw * i + gw / 2;
-    s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(x.d) + '</text>';
+    s += '<text x="' + cx.toFixed(1) + '" y="' + (P.t + ph + 16) + '" font-size="9.5" fill="' + PALETTE.label + '" text-anchor="middle">' + md(x.d) + '</text>';
   });
-  s += '<line x1="' + P.l + '" y1="' + (P.t + ph) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph) + '" stroke="#DCE2E9"/>';
+  s += '<line x1="' + P.l + '" y1="' + (P.t + ph) + '" x2="' + (W - P.r) + '" y2="' + (P.t + ph) + '" stroke="' + PALETTE.axis + '"/>';
   s += '</svg>';
   return s;
 }
@@ -1125,8 +1140,8 @@ function weightBlock(days){
     +   '<div class="sec-body">'
     +     stat
     +     '<div class="legend">'
-    +       '<span><i style="background:#6B8F9E"></i>体重（每日生效值）</span>'
-    +       '<span><i style="background:#B5764A;border-radius:50%"></i>称重日</span>'
+    +       '<span><i style="background:' + PALETTE.ink + '"></i>体重（每日生效值）</span>'
+    +       '<span><i style="background:' + PALETTE.warm + ';border-radius:50%"></i>称重日</span>'
     +     '</div>'
     +     '<div class="chart-box">' + chartWeight(vals) + '</div>'
     +     '<div class="card-sub" style="margin-top:4px">数据来自「体重记录」：未称重的日期沿用上一条记录，折线保持水平；你录入新体重的当天才会跳变，且只影响当天及以后。</div>'
@@ -1158,8 +1173,8 @@ function chartWeight(vals){
   let s = '<svg ' + size + ' xmlns="http://www.w3.org/2000/svg">';
   for (let i = 0; i <= 4; i++) {
     const v = lo + (hi - lo) * i / 4, yy = y(v);
-    s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="#EDF0F4"/>';
-    s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="#9AA6B2" text-anchor="end">' + v.toFixed(1) + '</text>';
+    s += '<line x1="' + P.l + '" y1="' + yy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + yy.toFixed(1) + '" stroke="' + PALETTE.grid + '"/>';
+    s += '<text x="' + (P.l - 8) + '" y="' + (yy + 3.5).toFixed(1) + '" font-size="10" fill="' + PALETTE.label + '" text-anchor="end">' + v.toFixed(1) + '</text>';
   }
 
   // 阶梯折线：沿用值保持水平，录入新体重的当天垂直跳变
@@ -1177,7 +1192,7 @@ function chartWeight(vals){
       const pk = seg[k - 1][1];
       d += ' L' + x(i).toFixed(1) + ' ' + y(pk).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(kg).toFixed(1);
     });
-    s += '<path d="' + d + '" fill="none" stroke="#6B8F9E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    s += '<path d="' + d + '" fill="none" stroke="' + PALETTE.ink + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
   });
 
   // 点：称重日实心并标数值
@@ -1186,18 +1201,18 @@ function chartWeight(vals){
     if (v.kg == null) return;
     const cx = x(i), cy = y(v.kg);
     if (v.rec) {
-      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.6" fill="#B5764A" stroke="#fff" stroke-width="1.4"/>';
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.6" fill="' + PALETTE.warm + '" stroke="#fff" stroke-width="1.4"/>';
       if (recCount <= 12 || i % step === 0) {
-        s += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" font-size="9" font-weight="600" fill="#B5764A" text-anchor="middle">' + fmt(v.kg, 1) + '</text>';
+        s += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" font-size="9" font-weight="600" fill="' + PALETTE.warm + '" text-anchor="middle">' + fmt(v.kg, 1) + '</text>';
       }
     } else {
-      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2" fill="#fff" stroke="#6B8F9E" stroke-width="1.4"/>';
+      s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="2" fill="#fff" stroke="' + PALETTE.ink + '" stroke-width="1.4"/>';
     }
     if (i % step === 0) {
-      s += '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="#9AA6B2" text-anchor="middle">' + md(v.d) + '</text>';
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (base + 16) + '" font-size="9.5" fill="' + PALETTE.label + '" text-anchor="middle">' + md(v.d) + '</text>';
     }
   });
-  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="#DCE2E9"/>';
+  s += '<line x1="' + P.l + '" y1="' + base + '" x2="' + (W - P.r) + '" y2="' + base + '" stroke="' + PALETTE.axis + '"/>';
   s += '</svg>';
   return s;
 }
