@@ -112,6 +112,15 @@ input:focus,select:focus{outline:none;border-color:var(--primary)}
 .entry .entry-title{grid-column:1 / -1;font-size:12px;font-weight:600;color:var(--primary)}
 .entry.custom{grid-template-columns:1fr 1fr auto}
 .entry.custom .c-name{grid-column:1 / -1}
+.combo{position:relative}
+.combo input{width:100%}
+.drop{position:absolute;z-index:30;left:0;width:calc(200% + 8px);top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 26px rgba(90,70,50,.13);max-height:220px;overflow-y:auto;padding:4px}
+.drop-item{padding:8px 10px;border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.drop-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drop-item em{font-style:normal;color:var(--text2);font-size:11.5px;white-space:nowrap}
+.drop-item:hover,.drop-item.on{background:#FBEEE0}
+.drop-empty{padding:12px 10px;color:var(--text2);font-size:12.5px;text-align:center}
+.drop-count{position:sticky;top:-4px;z-index:1;background:#fff;margin:-4px -4px 2px;padding:6px 10px;font-size:11.5px;color:var(--text2);border-bottom:1px solid var(--line);border-radius:6px 6px 0 0}
 @media (min-width:560px){
   .entry.custom{grid-template-columns:1.5fr 1fr 1fr auto}
   .entry.custom .c-name{grid-column:auto}
@@ -589,6 +598,8 @@ function dietSection(){
   const foodOpts = DB.foods.length
     ? DB.foods.map(f => '<option value="' + f.id + '"' + (state.lastFood === f.id ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('')
     : '<option value="">（食物库为空）</option>';
+  const curFood = DB.foods.find(f => f.id === state.lastFood);
+  const curFoodName = curFood ? curFood.name : '';
 
   const logs = DB.logs.filter(l => l.date === state.date && l.meal === state.meal);
   const list = logs.length ? logs.map(l => {
@@ -610,7 +621,11 @@ function dietSection(){
     +     '<div class="meal-tabs">' + tabs + '</div>'
     +     '<div class="entry">'
     +       '<div class="entry-title">从食物库添加</div>'
-    +       '<select id="in-food" onchange="onFoodChange()">' + foodOpts + '</select>'
+    +       '<div class="combo">'
+    +         '<input id="in-food-q" type="text" autocomplete="off" placeholder="搜索食物" value="' + esc(curFoodName) + '" oninput="filterFoods(this.value)" onfocus="this.select();filterFoods(\'\')" onblur="blurFoodDrop()" onkeydown="foodKey(event)">'
+    +         '<div id="food-drop" class="drop" style="display:none"></div>'
+    +         '<select id="in-food" style="display:none" onchange="onFoodChange()">' + foodOpts + '</select>'
+    +       '</div>'
     +       '<select id="in-unit"></select>'
     +       '<div class="qty-row">'
     +         '<input id="in-qty" type="number" inputmode="decimal" min="0" step="0.1" placeholder="食用量（数字）" onkeydown="if(event.key===\'Enter\')addLog()">'
@@ -632,6 +647,78 @@ function dietSection(){
 
 function setMeal(m){ state.meal = m; render(); }
 
+/* ---------- 食物模糊搜索 ---------- */
+/* 先按子串匹配，再按字符顺序匹配（如「燕片」能命中「燕麦片」） */
+function fuzzyHit(name, kw){
+  const s = String(name || '').toLowerCase();
+  let i = 0;
+  for (let k = 0; k < s.length && i < kw.length; k++) {
+    if (s[k] === kw[i]) i++;
+  }
+  return i >= kw.length;
+}
+function filterFoods(q){
+  const drop = $('food-drop');
+  if (!drop) return;
+  const kw = String(q || '').trim().toLowerCase();
+  const list = DB.foods.filter(f => !kw || f.name.toLowerCase().indexOf(kw) >= 0 || fuzzyHit(f.name, kw));
+  /* 超过一屏（约 6 条）时在顶部吸顶显示总数，提醒还能继续滑动 */
+  const head = list.length > 6 ? '<div class="drop-count">共 ' + list.length + ' 个匹配 · 可上下滑动</div>' : '';
+  drop.innerHTML = list.length
+    ? head + list.map(f => {
+        const u = f.units && f.units[0];
+        return '<div class="drop-item" data-id="' + f.id + '" onmousedown="pickFood(\'' + f.id + '\')">'
+          + '<span>' + esc(f.name) + '</span>'
+          + '<em>' + (u ? esc(u.name) + ' · ' + u.p + '/' + u.c + 'g' : '') + '</em></div>';
+      }).join('')
+    : '<div class="drop-empty">没有匹配的食物</div>';
+  drop.style.display = 'block';
+  positionDrop();
+}
+/* 下方空间不够时改为向上展开，避免浮层底部跑出屏幕 */
+function positionDrop(){
+  const drop = $('food-drop');
+  if (!drop || drop.style.display === 'none') return;
+  const box = drop.parentElement;
+  if (!box) return;
+  drop.style.top = ''; drop.style.bottom = ''; drop.style.maxHeight = '';
+  const r = box.getBoundingClientRect();
+  const gap = 8, limit = 220;
+  const below = window.innerHeight - r.bottom - gap;
+  const above = r.top - gap;
+  const need = Math.min(drop.scrollHeight, limit);
+  if (below < need && above > below) {
+    drop.style.top = 'auto';
+    drop.style.bottom = 'calc(100% + 4px)';
+    drop.style.maxHeight = Math.max(120, Math.min(limit, above)) + 'px';
+  } else {
+    drop.style.maxHeight = Math.max(120, Math.min(limit, below)) + 'px';
+  }
+}
+function blurFoodDrop(){
+  setTimeout(() => { const d = $('food-drop'); if (d) d.style.display = 'none'; }, 130);
+}
+function pickFood(id){
+  const f = DB.foods.find(x => x.id === id);
+  if (!f) return;
+  state.lastFood = id;
+  const sel = $('in-food'), q = $('in-food-q'), drop = $('food-drop');
+  if (sel) sel.value = id;
+  if (q) q.value = f.name;
+  if (drop) drop.style.display = 'none';
+  onFoodChange();
+  const qty = $('in-qty');
+  if (qty) qty.focus();
+}
+function foodKey(e){
+  if (e.key === 'Enter') {
+    const first = document.querySelector('#food-drop .drop-item');
+    if (first) { e.preventDefault(); pickFood(first.getAttribute('data-id')); }
+  } else if (e.key === 'Escape') {
+    const d = $('food-drop'); if (d) d.style.display = 'none';
+  }
+}
+
 function onFoodChange(init){
   const fsel = $('in-food'), usel = $('in-unit');
   if (!fsel || !usel) return;
@@ -640,14 +727,21 @@ function onFoodChange(init){
   usel.innerHTML = (f && f.units.length)
     ? f.units.map(u => '<option value="' + esc(u.name) + '">' + esc(u.name) + ' · ' + u.p + '/' + u.c + 'g</option>').join('')
     : '<option value="">—</option>';
-  if (keep) usel.value = keep;
+  if (keep && Array.prototype.some.call(usel.options, o => o.value === keep)) usel.value = keep;
   if (fsel.value) state.lastFood = fsel.value;
+  const qEl = $('in-food-q');
+  if (qEl) qEl.value = f ? f.name : '';
 }
 
 function addLog(){
   const fid = $('in-food') ? $('in-food').value : '';
   const unit = $('in-unit') ? $('in-unit').value : '';
   const qty = parseFloat($('in-qty').value);
+  const qEl = $('in-food-q');
+  if (qEl && fid) {
+    const sel = DB.foods.find(x => x.id === fid);
+    if (sel && qEl.value.trim() !== sel.name) return toast('请从下拉列表中选择食物');
+  }
   if (!fid) return toast('请先到食物库添加食物');
   if (!unit) return toast('该食物还没有单位');
   if (!(qty > 0)) return toast('请输入食用量');
