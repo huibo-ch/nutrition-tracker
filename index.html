@@ -821,7 +821,7 @@ function sleepSection(){
     +     '<input class="mini-date" type="date" value="' + state.date + '" onchange="setDate(this.value)"></div>'
     +   '<div class="sec-body">'
     +     '<div class="notice" id="sleep-notice" style="display:none;margin-top:0;margin-bottom:10px">'
-    +       '<b>以开始睡觉所在日期统计。</b>例如 10/23 凌晨 1:00 入睡，请把日期选为 10/23（而不是睡前那天 10/22）。'
+    +       '<b>以开始睡觉时点所属的日期统计。</b>例如 10/23 晚上 10 点睡觉，日期记为 10/23；如果 10/23 晚上没睡、直到 10/24 凌晨 1:00 才入睡，日期同样记为 10/23（不是 10/24，因为 10/24 晚上还会再睡）。'
     +     '</div>'
     +     '<div class="sleep-grid">'
     +       '<div class="field"><label>开始睡觉时间</label><input id="in-bed" type="time" value="' + bedVal + '"></div>'
